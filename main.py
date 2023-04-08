@@ -53,6 +53,3 @@ task = (
     f" Don't use nano, vim or other text editors, but rather modify files directly either via python or terminal"
 )
 exec_agent.run(task)
-
-
-
