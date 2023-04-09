@@ -6,6 +6,7 @@ from langchain.chat_models import ChatOpenAI
 from config import *
 
 from custom_tools import GitToolBuilder
+from choose_item import choose_item
 from utils import login_github, choose_issue, list_issues, list_repositories
 
 # Log into GitHub
@@ -21,11 +22,20 @@ repository_name = input("Enter the name of the repository you want to work with:
 
 github_repo = github.get_repo(repository_name)
 
+# Choose between issues and pull requests
+item_type = choose_item()
+
+# List issues or pull requests and let user choose one
+if item_type == 1:
+    issues = list_issues(github_repo)
+    item = choose_issue(issues)
+else:
+    # TODO: Add functionality to list pull requests and let user choose one
+    pass
+
 # List issues in the repository
-issues = list_issues(github_repo)
 
 # Let user choose an issue
-issue = choose_issue(issues)
 
 # create a repo object which represents the repository we are inside of
 pygit_repo = Repo(os.getcwd())
