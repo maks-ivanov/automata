@@ -1,3 +1,4 @@
+# This file contains utility functions used throughout the project.
 # New functions
 from typing import Union
 import github

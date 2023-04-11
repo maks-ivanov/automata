@@ -1,3 +1,4 @@
+# This file contains the main logic of the project.
 #!/usr/bin/env python3
 import sys
 import traceback

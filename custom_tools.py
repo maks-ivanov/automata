@@ -1,3 +1,4 @@
+# This file contains custom tools used throughout the project.
 from typing import List, Union, Optional
 
 import git

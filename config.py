@@ -1,3 +1,4 @@
+# This file contains configuration variables used throughout the project.
 import os
 from dotenv import load_dotenv
 
