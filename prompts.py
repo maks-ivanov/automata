@@ -1,3 +1,4 @@
+# This file contains ...
 import os
 from typing import List, Union
 
@@ -26,9 +27,9 @@ def make_planning_task(
         f" Your task is to thoroughly understand the following work item and "
         f" create simple and thorough step-by-step instructions for a developer to implement the solution."
         f" You should not make the changes yourself, but rather output instructions for a developer to make the changes."
-        f" \n\nTitle: {work_item.title}"
-        f" \n\nBody: {work_item.body}"
-        f" \n\nComments: {[c.body for c in work_item.get_comments() if not c.body.startswith(PLANNER_AGENT_OUTPUT_STRING)]}"
+        f" \n\nWork Item Title: {work_item.title}"
+        f" \n\nWork Item Body: {work_item.body}"
+        f" \n\nWork Item Comments: {[c.body for c in work_item.get_comments() if not c.body.startswith(PLANNER_AGENT_OUTPUT_STRING)]}"
         f" \n\n The developer will use your instructions to make changes to the repository and"
         f" {pr_or_issue_str} with working, clean, and documented code."
         f" Your developer is also a GPT-4-powered agent, so keep that in mind when creating instructions."
@@ -62,9 +63,9 @@ def make_execution_task(
         f" You are working in {os.getcwd()} on {github_repo_name} repository."
         f" Assume the repository is private, so don't try to look it up on the internet, but find it locally on your machine."
         f" You are working on the following work item: "
-        f"\n\nTitle: {work_item.title};"
-        f"\n\nBody: {work_item.body};"
-        f"\n\nComments: {[c.body for c in work_item.get_comments() if not c.body.startswith(PLANNER_AGENT_OUTPUT_STRING)]};"
+        f"\n\nWork Item Title: {work_item.title};"
+        f"\n\nWork Item Body: {work_item.body};"
+        f"\n\nWork Item Comments: {[c.body for c in work_item.get_comments() if not c.body.startswith(PLANNER_AGENT_OUTPUT_STRING)]};"
         f"\n\n A planning agent has created the following step-by-step instructions for you: <instructions>{solution_instructions}</instructions>"
         f" Execute the instructions thoroughly and"
         f" {pr_or_issue_str}"

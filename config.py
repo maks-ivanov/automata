@@ -1,3 +1,5 @@
+# This file contains ...
+# This file contains configuration variables for the project
 import os
 from dotenv import load_dotenv
 
