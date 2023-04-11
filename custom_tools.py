@@ -29,13 +29,14 @@ class GitToolBuilder:
         tools = [
             ...,
             Tool(
-                name='git-clone-repo',
+                name="git-clone-repo",
                 func=lambda input_str: self.clone_repository(input_str),
-                description='Clone a repository if it is not present in the WORKING_DIRECTORY and change working directory to the cloned repo directory.',
+                description="Clone a repository if it is not present in the WORKING_DIRECTORY and change working directory to the cloned repo directory.",
                 return_direct=False,
             ),
         ]
         return tools
+
     def create_new_branch(self, branch_name: str) -> str:
         """
         Creates and checks out a new branch in the specified repository. The only input is the branch name. For exmpale: "my-branch". Before creating a new branch, make sure to pick a name that is not taken."

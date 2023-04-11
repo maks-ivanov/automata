@@ -3,8 +3,6 @@ import sys
 import traceback
 
 from git import Repo
-from github.Issue import Issue
-from github.PullRequest import PullRequest
 from langchain.agents import initialize_agent, load_tools, AgentType
 from langchain.chat_models import ChatOpenAI
 from langchain.memory import ConversationBufferMemory
@@ -36,8 +34,6 @@ default_branch_name = "babyagi-architecture"
 if pygit_repo.active_branch.name != default_branch_name:
     pygit_repo.git.checkout(default_branch_name)
 
-# checkout default branch and pull
-pygit_repo.git.checkout("main")
 pygit_repo.git.pull()
 
 work_item = choose_work_item(github_repo)
@@ -53,7 +49,7 @@ exec_tools = (
     base_tools + GitToolBuilder(github_repo, pygit_repo, work_item).build_tools()
 )
 
-memory = ConversationBufferMemory(memory_key="chat_history")
+memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
 
 
 plan_agent = initialize_agent(
@@ -90,7 +86,7 @@ if do_plan == "y":
         instructions = plan_agent.run(plan_task)
         print("Created new Instructions:", instructions)
         feedback = input(
-            "Do you approve? If approved, type 'y'. If not approved, type why so the agent can try again"
+            "Do you approve? If approved, type 'y'. If not approved, type why so the agent can try again: "
         )
         approved = feedback == "y"
         plan_task = feedback
