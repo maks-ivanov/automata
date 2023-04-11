@@ -27,33 +27,15 @@ class GitToolBuilder:
 
     def build_tools(self) -> List[Tool]:
         tools = [
+            ...,
             Tool(
-                name="git-new-branch",
-                func=lambda input_str: self.create_new_branch(input_str),
-                description="Creates and checks out a new branch in the specified repository. The only input is the branch name. For exmpale: 'my-branch'",
-                return_direct=False,
-            ),
-            Tool(
-                name="git-commit",
-                func=lambda input_str: self.commit_to_git(input_str),
-                description="Takes a string of comma-separated file names and commits them to git. For example 'file1.py,file2.py'",
-                return_direct=False,
-            ),
-            Tool(
-                name="git-create-pull-request",
-                func=lambda input_str: self.create_pull_request(input_str),
-                description="Creates a pull request in the specified repository.",
-                return_direct=False,
-            ),
-            Tool(
-                name="git-checkout-existing-branch",
-                func=lambda input_str: self.checkout_branch(input_str),
-                description="Checks out an existing branch in the specified repository. The only input is the branch name. For exmpale: 'my-branch'",
+                name='git-clone-repo',
+                func=lambda input_str: self.clone_repository(input_str),
+                description='Clone a repository if it is not present in the WORKING_DIRECTORY and change working directory to the cloned repo directory.',
                 return_direct=False,
             ),
         ]
         return tools
-
     def create_new_branch(self, branch_name: str) -> str:
         """
         Creates and checks out a new branch in the specified repository. The only input is the branch name. For exmpale: "my-branch". Before creating a new branch, make sure to pick a name that is not taken."
