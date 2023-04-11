@@ -106,3 +106,16 @@ class GitToolBuilder:
         return (
             f"Created pull request for  {title} in {self.github_repo.name} repository."
         )
+
+
+    def clone_repository(self, repository_url, repository_name):
+        repo_path = os.path.join(config.WORKING_DIRECTORY, repository_name)
+        if not os.path.exists(repo_path):
+            git.Repo.clone_from(repository_url, repo_path)
+        os.chdir(repo_path)
+
+
+    def build_tools(self, build_tool_params):
+        tools = super().build_tools(build_tool_params)
+        tools.append(Tool(name="Clone Repository", command=self.clone_repository))
+        return tools
