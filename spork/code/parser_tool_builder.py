@@ -87,7 +87,7 @@ class CodeParserToolBuilder:
             Tool(
                 name="code-parser-build-file-summary",
                 func=lambda file_name: self.code_parser.build_file_summary(file_name),
-                description='Returns a formatted summary of the specified file, or "No results found" if the file is not found or if there is nothing to summarize. A valid summary returns the concatenated docstrings of standalone functions, classes and their respective functions, and any nested classes.',
+                description="Returns a formatted summary of the specified file, or \"No results found\" if the file is not found or if there is nothing to summarize. A valid summary returns the concatenated docstrings of standalone functions, classes and their respective functions, and any nested classes. An explicit example to be executed in a python environment now follow -  from spork.code.parser import CodeParser; parser = CodeParser(); print(parser.build_file_summary('spork/code/parser.py'))",
                 return_direct=True,
             ),
         ]
