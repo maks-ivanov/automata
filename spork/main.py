@@ -9,11 +9,10 @@ from langchain.agents import AgentType, initialize_agent, load_tools
 from langchain.chat_models import ChatOpenAI
 from langchain.memory import ConversationBufferMemory
 
-from spork.utils import PassThroughBuffer, choose_work_item, list_repositories, login_github
-
 from .config import DO_RETRY, GITHUB_API_KEY, PLANNER_AGENT_OUTPUT_STRING
-from .custom_tools import GitToolBuilder, requests_get_clean
-from .prompts import make_execution_task, make_planning_task
+from .github.github_tool_builder import GitHubToolBuilder, requests_get_clean
+from .tools.prompts import make_execution_task, make_planning_task
+from .tools.utils import PassThroughBuffer, choose_work_item, list_repositories, login_github
 
 # Log into GitHub
 print("Logging into github")
@@ -48,7 +47,7 @@ assert pass_through_buffer.saved_output == ""
 sys.stdout = cast(TextIO, pass_through_buffer)
 base_tools = load_tools(["python_repl", "terminal", "human"], llm=llm)
 base_tools += [requests_get_clean]
-exec_tools = base_tools + GitToolBuilder(github_repo, pygit_repo, work_item).build_tools()
+exec_tools = base_tools + GitHubToolBuilder(github_repo, pygit_repo, work_item).build_tools()
 
 memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
 
