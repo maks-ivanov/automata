@@ -65,7 +65,7 @@ class CodebaseOracleToolBuilder:
         docsearch = FAISS.from_documents(texts, embeddings)
         self._chain = ConversationalRetrievalChain.from_llm(
             llm=self.llm,
-            retriever=docsearch.as_retriever(),
+            retriever=docsearch.as_retriever(seatch_type="mmr"),
             memory=self.memory,
             return_source_documents=True,
             get_chat_history=self._get_chat_history,
