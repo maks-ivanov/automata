@@ -4,8 +4,9 @@ import logging.config
 
 from spork.agents.agent_configs.agent_version import AgentVersion
 from spork.agents.mr_meeseeks_agent import MrMeeseeksAgent
+from spork.tools.python_tools.python_indexer import PythonIndexer
 from spork.tools.tool_managers.tool_utils import load_llm_tools
-from spork.tools.utils import get_logging_config
+from spork.tools.utils import get_logging_config, root_py_path
 
 
 def main():
@@ -18,7 +19,7 @@ def main():
     parser.add_argument(
         "--version",
         type=AgentVersion,
-        default=AgentVersion.MEESEEKS_V1,
+        default=AgentVersion.MEESEEKS_MASTER_V1,
         help="The version of the agent.",
     )
     parser.add_argument(
@@ -39,7 +40,7 @@ def main():
     parser.add_argument(
         "--tools",
         type=str,
-        default="python_parser,python_writer,codebase_oracle",
+        default="python_indexer,python_writer,codebase_oracle",
         help="Comma-separated list of tools to be used.",
     )
 
@@ -47,12 +48,16 @@ def main():
     assert not (
         args.instructions is None and args.session_id is None
     ), "You must provide instructions for the agent if you are not providing a session_id."
+    assert not (
+        args.instructions and args.session_id
+    ), "You must provide either instructions for the agent or a session_id."
 
     inputs = {"documentation_url": args.documentation_url, "model": args.model}
-    tool_payload, exec_tools = load_llm_tools(args.tools.split(","), inputs, logger)
+    _, exec_tools = load_llm_tools(args.tools.split(","), inputs, logger)
+    indexer = PythonIndexer(root_py_path())
 
     initial_payload = {
-        "overview": tool_payload["python_parser"].get_overview(),
+        "overview": indexer.get_overview(),
     }
 
     logger.info("Passing in instructions: %s", args.instructions)
@@ -71,6 +76,7 @@ def main():
     if args.session_id is None:
         agent.run()
     else:
+        logger.info("Replaying messages...")
         agent.replay_messages()
 
     while True:

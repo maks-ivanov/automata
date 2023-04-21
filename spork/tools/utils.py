@@ -31,9 +31,22 @@ def load_yaml(file_path: str) -> Any:
         return yaml.safe_load(file)
 
 
-def home_path() -> str:
+def root_py_path() -> str:
     """
-    Returns the path to the home folder.
+    Returns the path to the root of the project python code.
+
+    Returns:
+    - A path object in string form
+
+    """
+    script_dir = os.path.dirname(os.path.realpath(__file__))
+    data_folder = os.path.join(script_dir, "..")
+    return data_folder
+
+
+def root_path() -> str:
+    """
+    Returns the path to the root of the project directory.
 
     Returns:
     - A path object in string form
@@ -53,7 +66,7 @@ def format_config_path(config_dir: str, config_path: str) -> str:
     Returns:
     - The path to the config file.
     """
-    return os.path.join(home_path(), "spork", "agents", config_dir, config_path)
+    return os.path.join(root_path(), "spork", "agents", config_dir, config_path)
 
 
 def login_github(token: str) -> Github:
@@ -121,7 +134,7 @@ def choose_work_item(github_repo: Repository, choice: str = "") -> Union[Issue, 
     Returns:
     - A Github Issue object or PullRequest object representing the user's chosen work item.
     """
-    work_items = []
+    work_items: Any = []
     if choice == "":
         choice = input("Do you want to work on issues or pull requests (issues/pulls)? ")
     if choice == "issues":

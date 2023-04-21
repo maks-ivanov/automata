@@ -5,32 +5,39 @@ from langchain.agents import Tool
 
 from spork.tools.documentation_tools.documentation_gpt import DocumentationGPT
 from spork.tools.oracle.codebase_oracle import CodebaseOracle
-from spork.tools.python_tools import PythonParser, PythonWriter
+from spork.tools.python_tools.python_indexer import PythonIndexer
+from spork.tools.python_tools.python_writer import PythonWriter
 from spork.tools.tool_managers import (
     CodebaseOracleToolManager,
     DocumentationGPTToolManager,
-    PythonParserToolManager,
+    PythonIndexerToolManager,
     PythonWriterToolManager,
     build_tools,
+    build_tools_with_meeseeks,
 )
 from spork.tools.tool_managers.base_tool_manager import BaseToolManager
+from spork.tools.utils import root_py_path
 
 
 # TODO - Build a Tool enumeration for cleanliness
 def load_llm_tools(
     tool_list: List[str], inputs: Dict[str, str], logger: logging.Logger
 ) -> Tuple[Dict[str, BaseToolManager], List[Tool]]:
-    payload: Dict[str, BaseToolManager] = {}
-    if "python_parser" in tool_list:
-        python_parser = PythonParser()
-        payload["python_parser"] = cast(BaseToolManager, python_parser)
+    print("Received a tool_list = ", tool_list)
+    payload: dict = {}
+    if "python_indexer" in tool_list:
+        python_indexer = PythonIndexer(root_py_path())
+        payload["python_indexer"] = python_indexer
     if "python_writer" in tool_list:
-        assert "python_parser" in payload
-        payload["python_writer"] = cast(BaseToolManager, PythonWriter(python_parser))
+        assert "python_indexer" in payload
+        payload["python_writer"] = PythonWriter(python_indexer)
+    if "meeseeks_update_module" in tool_list:
+        if "python_writer" in tool_list:
+            payload["meeseeks_update_module"] = payload["python_writer"]
+        else:
+            payload["meeseeks_update_module"] = PythonWriter(PythonIndexer(root_py_path()))
     if "codebase_oracle" in tool_list:
-        payload["codebase_oracle"] = cast(
-            BaseToolManager, CodebaseOracle.get_default_codebase_oracle()
-        )
+        payload["codebase_oracle"] = CodebaseOracle.get_default_codebase_oracle()
     if "doc_gpt" in tool_list:
         payload["doc_gpt"] = cast(
             BaseToolManager,
@@ -45,29 +52,23 @@ def load_llm_tools(
     exec_tools: List[Tool] = []
     for tool_name in payload.keys():
         tool_name = tool_name.strip()
-        if tool_name == "python_parser":
-            exec_tools += build_tools(
-                PythonParserToolManager(cast(PythonParser, payload["python_parser"]))
-            )
+        if tool_name == "python_indexer":
+            exec_tools += build_tools(PythonIndexerToolManager(payload["python_indexer"]))
         elif tool_name == "python_writer":
-            exec_tools += build_tools(
-                PythonWriterToolManager(cast(PythonWriter, payload["python_writer"]))
-            )
+            exec_tools += build_tools(PythonWriterToolManager(payload["python_writer"]))
         elif tool_name == "codebase_oracle":
-            exec_tools += build_tools(
-                CodebaseOracleToolManager(
-                    cast(CodebaseOracle, payload["codebase_oracle"]),
-                )
-            )
+            exec_tools += build_tools(CodebaseOracleToolManager(payload["codebase_oracle"]))
         elif tool_name == "documentation_gpt":
             exec_tools += build_tools(
                 DocumentationGPTToolManager(
-                    cast(
-                        DocumentationGPT,
-                        (payload["documentation_gpt"]),
-                    )
+                    payload["documentation_gpt"],
                 )
             )
+        elif tool_name == "meeseeks_update_module" in tool_list:
+            exec_tools += build_tools_with_meeseeks(
+                PythonWriterToolManager(payload["meeseeks_update_module"])
+            )
+
         else:
             logger.warning("Unknown tool: %s", tool_name)
     return payload, exec_tools

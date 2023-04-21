@@ -5,21 +5,30 @@
 
     Example:
 
-        python_parser = PythonParser()
-        python_writer = PythonWriter(python_parser)
-
-        exec_tools = []
-        exec_tools += build_tools(python_parser)
-        exec_tools += build_tools(python_writer)
-        overview = python_parser.get_overview()
+ 
+        inputs = {"model": args.model}
+        tool_payload, exec_tools = load_llm_tools(tools_list, inputs, logger)
 
         initial_payload = {
-            "overview": overview,
+            "overview": tool_payload["python_indexer"].get_overview(),
         }
-        agent = MrMeeseeksAgent(initial_payload, exec_tools)
+
+        logger.info("Passing in instructions: %s", args.instructions)
+        logger.info("-" * 100)
+        agent = MrMeeseeksAgent(
+            initial_payload=initial_payload,
+            instructions=args.instructions,
+            tools=exec_tools,
+            version=args.version,
+            model=args.model,
+            session_id=args.session_id,
+            stream=args.stream,
+        )
 
         next_instruction = agent.iter_task(instructions)
         ...
+        TODO - Add error checking to ensure that we don't terminate when
+        our previous result returned an error
 """
 import logging
 import sqlite3
@@ -36,9 +45,6 @@ from spork.tools.utils import format_config_path
 
 from .agent_configs.agent_version import AgentVersion
 
-CONTINUE_MESSAGE = "Continue"
-COMPLETION_MESSAGE = "TASK_COMPLETED"
-
 logger = logging.getLogger(__name__)
 
 
@@ -49,12 +55,15 @@ class MrMeeseeksAgent:
     the results back to the master.
     """
 
+    CONTINUE_MESSAGE = "Continue"
+    COMPLETION_MESSAGE = "TASK_COMPLETED"
+
     def __init__(
         self,
         initial_payload: Dict[str, str],
         tools: List[BaseTool],
         instructions: str,
-        version: AgentVersion = AgentVersion.MEESEEKS_V1,
+        version: AgentVersion = AgentVersion.MEESEEKS_MASTER_V1,
         model: str = "gpt-4",
         session_id: Optional[str] = None,
         stream: bool = False,
@@ -65,7 +74,7 @@ class MrMeeseeksAgent:
             initial_payload (Dict[str, str]): The initial payload to be used for the agent.
             initial_instructions (List[Dict[str, str]]): The initial instructions to be used for the agent.
             tools (List[BaseTool]): The tools to be used for the agent.
-            version (AgentVersion, optional): The version of the agent. Defaults to AgentVersion.MEESEEKS_V1.
+            version (AgentVersion, optional): The version of the agent. Defaults to AgentVersion.MEESEEKS_MASTER_V1.
             model (str, optional): The model to be used for the agent. Defaults to "gpt-4".
             session_id (Optional[str], optional): The session id to be used for the agent. Defaults to None.
 
@@ -96,7 +105,7 @@ class MrMeeseeksAgent:
         initial_payload["tools"] = "".join(
             ["\n%s: %s\n" % (tool.name, tool.description) for tool in self.tools]
         )
-        initial_payload["completion_message"] = COMPLETION_MESSAGE
+        initial_payload["completion_message"] = MrMeeseeksAgent.COMPLETION_MESSAGE
         prompt = self._load_prompt(initial_payload)
 
         self._init_database()
@@ -171,9 +180,9 @@ class MrMeeseeksAgent:
             return processed_inputs
 
         # If there are no outputs, then the user has must respond to continue
-        self._save_interaction({"role": "user", "content": CONTINUE_MESSAGE})
+        self._save_interaction({"role": "user", "content": MrMeeseeksAgent.CONTINUE_MESSAGE})
         if self.verbose:
-            logger.info("Synthetic User Message:\n%s\n" % CONTINUE_MESSAGE)
+            logger.info("Synthetic User Message:\n%s\n" % MrMeeseeksAgent.CONTINUE_MESSAGE)
         context_length = sum(
             [
                 len(self.tokenizer.encode(message["content"], max_length=1024 * 8))
@@ -192,7 +201,7 @@ class MrMeeseeksAgent:
             self.iter_task()
             # if COMPLETION_MESSAGE in self.messages[-1]["content"]:
             #     break
-            if COMPLETION_MESSAGE in self.messages[-2]["content"]:
+            if MrMeeseeksAgent.COMPLETION_MESSAGE in self.messages[-2]["content"]:
                 break
 
     def replay_messages(self) -> None:
@@ -223,7 +232,6 @@ class MrMeeseeksAgent:
             "r",
         ) as file:
             loaded_yaml = yaml.safe_load(file)
-
         prompt = loaded_yaml["template"]
         for arg in loaded_yaml["input_variables"]:
             prompt = prompt.replace(f"{{{arg}}}", initial_payload[arg])
@@ -232,14 +240,17 @@ class MrMeeseeksAgent:
     def _process_input(self, response_text: str):
         """Process the messages in the conversation."""
         tool_calls = MrMeeseeksAgent._parse_input_string(response_text)
+        logger.info("Tool Calls: %s" % tool_calls)
         outputs = []
         for tool_request in tool_calls:
-            tool, tool_input = tool_request["tool"], tool_request["input"]
+            tool, tool_input = tool_request["tool"], tool_request["input"] or ""
             if tool == "error-reporter":
                 # In the event of an error, the tool_input becomes the output, as it is now a parsing error
                 tool_output = tool_input
                 outputs.append(tool_input)
             for tool_instance in self.tools:
+                logger.info("tool = %s" % tool)
+                logger.info("tool_instance = %s" % tool_instance)
                 if tool_instance.name == tool:
                     tool_output = tool_instance.run(tool_input, verbose=False)
                     outputs.append(tool_output)

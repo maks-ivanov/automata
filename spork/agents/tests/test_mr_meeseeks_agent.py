@@ -5,12 +5,13 @@ import pytest
 from langchain.agents import Tool
 
 from spork.agents.mr_meeseeks_agent import MrMeeseeksAgent
-from spork.tools.python_tools.python_parser import PythonParser
+from spork.tools.python_tools.python_indexer import PythonIndexer
+from spork.tools.utils import root_py_path
 
 
 @pytest.fixture
 def mr_meeseeks_agent():
-    python_parser = PythonParser()
+    python_indexer = PythonIndexer(root_py_path())
 
     exec_tools = [
         Tool(
@@ -22,7 +23,7 @@ def mr_meeseeks_agent():
         )
     ]
 
-    overview = python_parser.get_overview()
+    overview = python_indexer.get_overview()
 
     initial_payload = {
         "overview": overview,
@@ -89,7 +90,7 @@ def test_mr_meeseeks_agent_extract_json_objects_single_quotes(mr_meeseeks_agent)
 def test_mr_meeseeks_agent_parse_example_0(mr_meeseeks_agent):
     input_str = textwrap.dedent(
         """{
-  "tool": "python-writer-modify-code-state",
+  "tool": "python-writer-update-module",
   "input": "spork.tools.tool_managers.tests.test_mr_meeseeks_agent_tool_manager,import pytest
 from spork.agents.mr_meeseeks_agent import MrMeeseeksAgent
 from spork.tools.tool_managers.mr_meeseeks_agent_tool_manager import MrMeeseeksAgentToolManager
@@ -129,7 +130,7 @@ def test_tool_execution():
 def test_mr_meeseeks_agent_parse_example_1(mr_meeseeks_agent):
     input_str = textwrap.dedent(
         """{
-  "tool": "python-writer-modify-code-state",
+  "tool": "python-writer-update-module",
   "input": "spork.main_meeseeks.main,from spork.tools.tool_managers.mr_meeseeks_agent_tool_manager import MrMeeseeksAgentToolManager
 
 def main():
@@ -142,11 +143,11 @@ def main():
     logging.config.dictConfig(logging_config)
     logger = logging.getLogger(__name__)
     args = parser.parse_args()
-    python_parser = PythonParser()
-    python_writer = PythonWriter(python_parser)
+    python_indexer = PythonIndexer(root_py_path())
+    python_writer = PythonASTManipulator(python_indexer)
     exec_tools = []
-    exec_tools += build_tools(PythonParserToolManager(python_parser))
-    exec_tools += build_tools(PythonWriterToolManager(python_writer))
+    exec_tools += build_tools(PythonIndexerToolManager(python_indexer))
+    exec_tools += build_tools(PythonASTManipulatorToolManager(python_writer))
     overview = python_parser.get_overview()
     initial_payload = {'overview': overview}
     logger.info('Passing in instructions: %s', args.instructions)

@@ -1,82 +1,372 @@
-'''
-PythonWriter
+"""
+PythonWriter - A utility class for manipulating with Python AST nodes.
 
-This module provides functionality to modify the in-memory representation 
-of a Python package, via the PythonParser class, and write the changes to disk.
+This class provides methods for creating AST nodes from source code strings, and updating existing module objects with new code.
+It also allows for extending and reducing module functionality by adding, updating or removing classes, methods, and functions.
 
 Example usage:
-    parser = PythonParser()
-    writer = PythonWriter(parser)
 
-    print("Write a new standalone function:")
-    print(writer.modify_code_state('package_dir.module_name', 'def function_name():\n"""A new function"""\npass'))
+    ast_wrapper = PythonWriter()
 
-    print("Modify an existing function:")
-    print(writer.modify_code_state('package_dir.module_name', 'def function_name():\n"""My Modified function"""\ndo_something()'))
+    # Extend a module with new or updated code
+    code_to_extend = '''
+    def new_function():
+        print("New function added")
 
-    # The structure above works for packages, modules, classes, and methods as well.
-    # when done modifying code, write the changes to disk:
-    writer.write_to_disk()
-'''
+    class ExistingClass:
+        def new_method(self):
+            print("New method added")
+    '''
+    extended_module = ast_wrapper.extend_module(code_to_extend, extending_module=True, module_obj=existing_module)
+
+    # Reduce a module by removing code
+    code_to_reduce = '''
+    def function_to_remove():
+        pass
+
+    class ClassToRemove:
+        pass
+    '''
+    reduced_module = ast_wrapper.update_module(code_to_reduce, extending_module=False, module_obj=existing_module)
+
+    TODO - Add explicit check of module contents after extension and reduction.
+"""
 
 
 import ast
-import logging
 import os
 import re
 import subprocess
-from typing import Any, Dict, List, Set, Tuple
+from ast import ClassDef, FunctionDef, Module
+from typing import Optional, Union, cast
 
-from .python_parser import PythonParser
-from .python_types import (
-    RESULT_NOT_FOUND,
-    PythonClassType,
-    PythonFunctionType,
-    PythonModuleType,
-    PythonPackageType,
-)
-
-logger = logging.getLogger(__name__)
+from spork.tools.python_tools.python_indexer import PythonIndexer
 
 
 class PythonWriter:
     """
-    The PythonWriter class provides functionality to modify the in-memory representation
-    of a Python package, via the PythonParser class, and write the changes to disk.
+    A utility class for working with Python AST nodes.
 
-    Attributes:
-        python_parser (PythonParser): An instance of PythonParser.
-        modified_modules (Set[str]): A set containing the modified module paths.
+    Public Methods:
 
-    Methods:
-        __init__: Initialize PythonWriter with a PythonParser instance and register a callback for update notifications.
-        modify_code_state: Modify the in-memory representation of Python code and update the PythonParser state.
-        write_to_disk: Write the modified code to disk.
+        update_module(
+            source_code: str,
+            extending_module: bool,
+            module_obj (Optional[Module], keyword),
+            module_path (Optional[str], keyword)
+        ) -> None:
+            Perform an in-place extention or reduction of a module object according to the received code.
+
+        write_module(self) -> None:
+            Write the module object to a file.
+
+        Exceptions:
+            ModuleNotFound: Raised when a module cannot be found.
+            InvalidArguments: Raised when invalid arguments are passed to a method.
     """
 
-    def __init__(self, python_parser: PythonParser):
+    class ModuleNotFound(Exception):
+        pass
+
+    class ClassNotFound(Exception):
+        pass
+
+    class InvalidArguments(Exception):
+        pass
+
+    def __init__(self, python_ast_indexer: PythonIndexer):
         """
-        Initialize PythonWriter with a PythonParser instance and register a callback for update notifications.
+        Initialize the PythonWriter with a PythonIndexer instance.
+        """
+        self.indexer = python_ast_indexer
+
+    def update_module(
+        self,
+        source_code: str,
+        extending_module: bool = True,
+        **kwargs,
+    ) -> None:
+        """
+        Perform an in-place extention or reduction of a module object according to the received code.
 
         Args:
-            python_parser (PythonParser): An instance of PythonParser.
-        """
-        self.python_parser = python_parser
-        self.python_parser.register_update_callback(self._handle_update_notification)
-        self.modified_modules: Set[str] = set([])
-
-    def modify_code_state(self, module_py_path: str, code: str) -> str:
-        """
-        This function takes the input path and code and intelligently determines whether this
-        is a function, class, module, or package update. It then calls the appropriate method
-        to perform the update.
-
-        Args:
-            module_py_path (str): The path to the Python file.
-            code (str): The source code to be analyzed and updated.
+            source_code (str): The source_code containing the updates or deletions.
+            extending_module (bool): True for adding/updating, False for reducing/deleting.
+            module_obj (Optional[Module], keyword): The module object to be updated.
+            module_path (Optional[str], keyword): The path of the module to be updated.
+            class_name (Optional[str], keyword): The name of the class where the update should be applied, will default to modul.
+            write_to_disk (Optional[bool], keyword): Writes the changed module to disk.
 
         Raises:
-            ValueError: If the provided code is not valid Python.
+            InvalidArguments: If both module_obj and module_path are provided or none of them.
+
+        Returns:
+            Module: The updated module object.
+        """
+        module_obj = kwargs.get("module_obj")
+        module_path = kwargs.get("module_path")
+        class_name = kwargs.get("class_name")
+        write_to_disk = kwargs.get("write_to_disk") or False
+
+        self._validate_args(module_obj, module_path, write_to_disk)
+        source_code = PythonWriter._clean_input_code(source_code)
+
+        if not module_obj and module_path:
+            if module_path not in self.indexer.module_dict:
+                self._create_module_from_source_code(module_path, source_code)
+            module_obj = self.indexer.module_dict[module_path]
+        elif module_obj and not module_path:
+            module_path = self.indexer.get_module_path(module_obj)
+            assert module_path != PythonIndexer.NO_RESULT_FOUND_STR
+        PythonWriter._update_module(source_code, module_path, module_obj, extending_module, class_name)  # type: ignore
+        if write_to_disk:
+            assert module_path is not None, "Must provide a module path to write to disk."
+            self.write_module(module_path)
+
+    def write_module(self, module_path: str) -> None:
+        """
+        Write the modified AST module to a file at the specified output path.
+
+        Args:
+            module_path (str): The file path where the modified module should be written.
+        """
+        if module_path not in self.indexer.module_dict:
+            raise PythonWriter.ModuleNotFound(
+                f"Module not found in module dictionary: {module_path}"
+            )
+
+        module_obj = self.indexer.module_dict[module_path]
+        source_code = ast.unparse(module_obj)
+        module_os_rel_path = module_path.replace(self.indexer.PATH_SEP, os.path.sep)
+        # Add path relative to indexer to the output path
+        module_os_abs_path = os.path.join(self.indexer.abs_path, module_os_rel_path)
+        # Make directories if they do not exist
+        os.makedirs(os.path.dirname(module_os_abs_path), exist_ok=True)
+        file_path = f"{module_os_abs_path}.py"
+        with open(file_path, "w") as output_file:
+            output_file.write(source_code)
+        subprocess.run(["black", file_path])
+        subprocess.run(["isort", file_path])
+
+    def _create_module_from_source_code(self, module_path: str, source_code: str) -> Module:
+        """
+        Create a Python module from the given source code string.
+
+        Args:
+            module_path (str): The path where the new module will be created.
+        """
+        parsed = ast.parse(source_code)
+        if not isinstance(parsed, Module):
+            raise ValueError("The source code does not define a module.")
+        self.indexer.module_dict[module_path] = parsed
+        return parsed
+
+    @staticmethod
+    def _validate_args(
+        module_obj: Optional[Module], module_path: Optional[str], write_to_disk: bool
+    ) -> None:
+        if not (module_obj or module_path) or (module_obj and module_path):
+            raise PythonWriter.InvalidArguments(
+                "Provide either 'module_obj' or 'module_path', not both or none."
+            )
+        if not module_path and write_to_disk:
+            raise PythonWriter.InvalidArguments(
+                "Provide 'module_path' to write the module to disk."
+            )
+
+    @staticmethod
+    def _update_module(
+        source_code: str,
+        module_path: str,
+        existing_module_obj: Module,
+        extending_module: bool,
+        class_name: Optional[str] = None,
+    ) -> None:
+        """
+        Update a module object according to the received code.
+
+        Args:
+            source_code (str): The code containing the updates.
+            module_path (str): The relative path to the module.
+            existing_module_obj Module: The module object to be updated.
+            extending_module (bool): If True, add or update the code; if False, remove the code.
+        """
+
+        if class_name:
+            existing_class = PythonWriter._find_function_class_or_method(
+                existing_module_obj, class_name
+            )
+            if not existing_class:
+                raise PythonWriter.ClassNotFound(
+                    f"Class {class_name} not found in module {module_path}"
+                )
+            if not isinstance(existing_class, ClassDef):
+                raise PythonWriter.ClassNotFound(
+                    f"Object {class_name} in module {module_path} is not a class."
+                )
+            PythonWriter._update_class(
+                source_code, cast(ClassDef, existing_class), extending_module
+            )
+        else:
+            new_ast = ast.parse(source_code)
+            for new_node in new_ast.body:
+                if isinstance(new_node, (ClassDef, FunctionDef)):
+                    obj_name = new_node.name
+                    existing_obj = PythonWriter._find_function_class_or_method(
+                        existing_module_obj, obj_name
+                    )
+
+                    if extending_module:
+                        if existing_obj:
+                            PythonWriter._update_existing_node(
+                                existing_module_obj, new_node, existing_obj
+                            )
+                        else:
+                            PythonWriter._add_ast_node(existing_module_obj, new_node)
+                    else:
+                        if existing_obj:
+                            PythonWriter._remove_existing_node(existing_module_obj, existing_obj)
+
+    @staticmethod
+    def _update_class(
+        source_code: str,
+        existing_class_obj: ClassDef,
+        extending_module: bool,
+    ) -> None:
+        new_ast = ast.parse(source_code)
+        for new_node in new_ast.body:
+            if isinstance(new_node, FunctionDef):
+                method_name = new_node.name
+                existing_method = PythonWriter._find_function_class_or_method(
+                    existing_class_obj, method_name
+                )
+
+                if extending_module:
+                    if existing_method:
+                        PythonWriter._update_existing_node(
+                            existing_class_obj, new_node, existing_method
+                        )
+                    else:
+                        PythonWriter._add_ast_node(existing_class_obj, new_node)
+                else:
+                    if existing_method:
+                        PythonWriter._remove_existing_node(existing_class_obj, existing_method)
+
+    @staticmethod
+    def _update_existing_node(
+        python_obj: Union[Module, ClassDef],
+        new_node: Union[ClassDef, FunctionDef],
+        existing_node: Union[ClassDef, FunctionDef],
+    ) -> None:
+        """
+        Update an existing object (class or function) in the module.
+
+        Args:
+            module_obj (Module): The module or class object to be updated.
+            new_node (Union[ClassDef, FunctionDef]): The new AST node.
+            existing_node (Union[ClassDef, FunctionDef]): The existing AST node.
+        """
+        if isinstance(new_node, ClassDef) and isinstance(existing_node, ClassDef):
+            for node in new_node.body:
+                class_name = new_node.name
+                if isinstance(node, FunctionDef):
+                    method_name = node.name
+                    lookup_path = f"{class_name}.{method_name}"
+                    existing_method = PythonWriter._find_function_class_or_method(
+                        python_obj, lookup_path
+                    )
+
+                    if existing_method:
+                        existing_method.body = node.body
+                    else:
+                        PythonWriter._add_ast_node(python_obj, node, target_node=existing_node)
+        elif isinstance(new_node, FunctionDef) and isinstance(existing_node, FunctionDef):
+            existing_node.args = new_node.args
+            existing_node.body = new_node.body
+
+    @staticmethod
+    def _remove_existing_node(
+        python_obj: Union[Module, ClassDef], existing_obj: Union[ClassDef, FunctionDef]
+    ) -> None:
+        """
+        Remove an existing object (class or function) from the module.
+
+        Args:
+            python_obj (Union[Module, ClassDef]): The python object to be updated.
+            existing_obj (Union[ClassDef, FunctionDef]): The existing AST node.
+        """
+        if existing_obj in python_obj.body:
+            python_obj.body.remove(existing_obj)
+        elif isinstance(existing_obj, ClassDef):
+            for method_node in existing_obj.body:
+                if isinstance(method_node, FunctionDef):
+                    if method_node in existing_obj.body:
+                        existing_obj.body.remove(method_node)
+
+    @staticmethod
+    def _add_ast_node(
+        python_obj: Union[Module, ClassDef],
+        node: Union[FunctionDef, ClassDef],
+        target_node: Optional[Union[ClassDef, Module]] = None,
+    ):
+        """
+        Add an AST node (function or class) to the target node (class or module) in the specified module.
+
+        Args:
+            python_obj (Union[Module, ClassDef]): The python object to be updated.
+            node (Union[FunctionDef, ClassDef]): The new function or class to add.
+            target_node (Optional[Union[ClassDef, Module]]): The target node (class or module) where the new node will be added.
+                                                       If not provided, the new node will be added to the module level.
+        """
+        if target_node is None:
+            # Add the new node to the module level
+            target_node = python_obj
+
+        # Add the new node to the target_node's body
+        target_node.body.append(node)
+
+    @staticmethod
+    def _find_function_class_or_method(
+        code_obj: Union[Module, ClassDef], lookup_name: str
+    ) -> Optional[Union[FunctionDef, ClassDef]]:
+        """
+        Find a function or method node in a module or class.
+
+        Args:
+            module_path (str): The path of the module where the function is located.
+            function_name (str): The name of the function to find.
+            class_name (Optional[str], optional): The name of the class where the method is located. If not provided, the function is assumed to be at the module level.
+
+        Returns:
+            Optional[FunctionDef]: The found function or method node, or None if not found.
+        """
+        lookup_split = lookup_name.split(".")
+        lookup_name = lookup_split[0]
+        # Find the method node in the class
+        for node in code_obj.body:
+            if isinstance(node, FunctionDef) and node.name == lookup_name:
+                assert len(lookup_split) == 1, "Function name is not unique"
+                return node
+            elif isinstance(node, ClassDef) and node.name == lookup_name:
+                if len(lookup_split) == 1:
+                    return node
+                else:
+                    return PythonWriter._find_function_class_or_method(
+                        node, ".".join(lookup_split[1:])
+                    )
+
+        return None
+
+    @staticmethod
+    def _clean_input_code(source_code: str) -> str:
+        """
+        Take the input source code and remove formatting issues that will cause the AST to fail.
+
+        Args:
+            source_code (str): The source code to clean.
+
+        Returns:
+            str: The cleaned source code.
         """
 
         def replace_newline_chars(input_str: str) -> str:
@@ -106,255 +396,7 @@ class PythonWriter:
             )
             return output_str
 
-        print("-" * 100)
-        print("Initial Code = ", code)
-        code = replace_newline_chars(code)
-        code = re.sub(r"\\\"", '"', code)
-        code = code.strip()
-        # Check that we can parse the code
-        print("Cleaned Code = ", code)
-        try:
-            self._validate_code(code)
-        except ValueError as e:
-            error_message = (
-                f"Failed to parse code with error {e}. Please check that the code is valid Python."
-            )
-            logger.info(f"Found Error = {error_message}")
-            return error_message
-
-        package_path = module_py_path.split(".")[-1]
-        # Create the package if it does not already exist
-        if package_path not in self.python_parser.package_dict:
-            self._create_new_package(package_path)
-
-        # Update the module dictionaries
-        if module_py_path not in self.python_parser.module_dict:
-            self._create_new_module(module_py_path, code)
-        else:
-            self._modify_existing_module_imports(module_py_path, code)
-        existing_module = self.python_parser.module_dict[module_py_path]
-        # Update the package dictionaries to reflect module changes
-        self._modify_existing_package(package_path, module_py_path, existing_module)
-
-        # Update the class and function dictionaries
-        class_methods, functions_dict, classes_code, _ = self.python_parser.parse_raw_code(code)
-        for class_name in classes_code:
-            class_path = f"{module_py_path}.{class_name}"
-            # Create the class entry if it does not already exist
-            if class_path not in self.python_parser.class_dict:
-                self._create_new_class(class_path, classes_code[class_name])
-            # Update the class and function dictionaries
-            for method_name in class_methods[class_name]:
-                method_path = f"{class_path}.{method_name}"
-                function = PythonFunctionType.from_code(
-                    method_path, class_methods[class_name][method_name]
-                )
-                self.python_parser.class_dict[class_path].methods[method_path] = function
-                self.python_parser.function_dict[method_path] = function
-        for function_name in functions_dict:
-            function_path = f"{module_py_path}.{function_name}"
-            function_code = functions_dict[function_name]
-            function_object = PythonFunctionType.from_code(function_path, function_code)
-            self.python_parser.function_dict[function_path] = function_object
-            self.python_parser.module_dict[module_py_path].standalone_functions[
-                function_path
-            ] = function_object
-        print("-" * 100)
-        self.modified_modules.add(module_py_path)
-        return "Success"
-
-    def write_to_disk(self) -> str:
-        """
-        Rebuilds the Python module file at the given file path in a deterministic order,
-        checking if the resulting output is a valid Python file.
-
-        Raises:
-            ValueError: If the resulting output is not a valid Python file.
-        """
-        for module_py_path in self.python_parser.module_dict.keys():
-            file_path = os.path.join(
-                self.python_parser.absolute_path_to_base, *(module_py_path.split("."))
-            )
-            if module_py_path in self.modified_modules:
-                self._write_file(f"{file_path}.py", module_py_path)
-        return "Success"
-
-    def _write_file(self, file_path: str, module_py_path: str) -> None:
-        """
-        Write the code for a module to a file.
-
-        Args:
-            file_path (str): The path to the file to write.
-            module_py_path (str): The Python path of the module to write.
-
-        Raises:
-            ValueError: If the generated code is not valid Python.
-        """
-        module_obj = self.python_parser.module_dict[module_py_path]
-        docstring = module_obj.docstring
-        functions = module_obj.standalone_functions
-        classes = module_obj.classes
-
-        code_parts = []
-
-        if docstring and docstring != RESULT_NOT_FOUND:
-            code_parts.append(f'"""{docstring}"""\n\n')
-
-        for import_statement in module_obj.imports:
-            code_parts.append(import_statement)
-            code_parts.append("\n")
-
-        for function in functions.values():
-            code_parts.append(function.code)
-            code_parts.append("\n\n")
-
-        for class_obj in classes.values():
-            code_parts.append(class_obj.code)
-            code_parts.append("\n\n")
-
-        new_code = "".join(code_parts)
-
-        try:
-            ast.parse(new_code)
-        except SyntaxError as e:
-            raise ValueError(f"Generated code is not valid Python: {e}")
-        dir_path = os.path.dirname(file_path)
-        os.makedirs(dir_path, exist_ok=True)
-        with open(file_path, "w", encoding="utf-8") as f:
-            f.write(new_code)
-
-        # Format the output file to match the Black style
-        subprocess.run(["black", file_path])
-        subprocess.run(["isort", file_path])
-
-    def _validate_code(self, code: str) -> None:
-        """
-        Validate the given Python code by parsing it and raising a ValueError if it's not valid.
-
-        Args:
-            code (str): Python code to validate.
-
-        Raises:
-            ValueError: If the provided code is not valid Python.
-        """
-        try:
-            ast.parse(code)
-        except SyntaxError as e:
-            raise ValueError(f"Provided code is not valid Python: {e}")
-
-    def _create_new_package(self, py_path: str) -> None:
-        """
-        Add a new package to the PythonParser package dictionary and update dependent dictionaries.
-
-        Args:
-            py_path (str): Package path.
-        """
-        assert py_path not in self.python_parser.package_dict
-        self.python_parser.package_dict[py_path] = PythonPackageType(py_path, {})
-
-    def _modify_existing_package(
-        self, package_py_path: str, module_py_path: str, module: PythonModuleType
-    ) -> None:
-        """
-        Modify an existing package in the PythonParser.
-
-        Args:
-            py_path (str): The Python path of the package to modify.
-        """
-        assert package_py_path in self.python_parser.package_dict
-        self.python_parser.package_dict[package_py_path].modules[module_py_path] = module
-
-    def _create_new_module(self, module_py_path: str, module_code: str) -> None:
-        """
-        Add a new module to the PythonParser.
-
-        Args:
-            module_py_path (str): The Python path of the module.
-            module_code (str): The source code of the module.
-        """
-        assert module_py_path not in self.python_parser.module_dict
-        stripped_module_code, import_statements = self._strip_import_statements(module_code)
-
-        module_obj = PythonModuleType.from_code(
-            module_py_path, stripped_module_code, import_statements
-        )
-
-        self.python_parser.module_dict[module_py_path] = module_obj
-        self.modified_modules.add(module_py_path)
-
-    def _modify_existing_module_imports(self, module_py_path: str, module_code: str) -> None:
-        """
-        Modify an existing module in the PythonParser.
-
-        Args:
-            module_py_path (str): The Python path of the module to modify.
-            module_code (str): The new source code of the module.
-        """
-        assert module_py_path in self.python_parser.module_dict
-
-        _, import_statements = self._strip_import_statements(module_code)
-        self.python_parser.module_dict[module_py_path].imports.extend(import_statements)
-
-    def _modify_existing_module(self, module_py_path: str, module_code: str) -> None:
-        """
-        Modify an existing module in the PythonParser.
-
-        Args:
-            module_py_path (str): The Python path of the module to modify.
-            module_code (str): The new source code of the module.
-        """
-        assert module_py_path in self.python_parser.module_dict
-
-        _, import_statements = self._strip_import_statements(module_code)
-        self.python_parser.module_dict[module_py_path].imports.extend(import_statements)
-
-    def _create_new_class(self, class_py_path: str, class_code: str) -> None:
-        """
-        Add a new class to the PythonParser.
-        Args:
-            module_py_path (str): The Python path of the module containing the class.
-            class_py_path (str): The Python path of the class.
-            class_code (str): The source code of the class.
-            module_code (str, optional): The source code of the module, required if the module doesn't exist.
-        """
-        stripped_class_code, _ = self._strip_import_statements(class_code)
-        class_obj = PythonClassType.from_code(class_py_path, stripped_class_code)
-        self.python_parser.class_dict[class_py_path] = class_obj
-
-    # TODO - Implement callbacks here for the PythonParser to use
-    def _handle_update_notification(
-        self, object_type: str, py_path: str, payload: Dict[str, Any]
-    ) -> None:
-        pass
-
-    @staticmethod
-    def _strip_import_statements(code: str) -> Tuple[str, List[str]]:
-        """
-        Strip import statements from a given code string.
-
-        Args:
-            code (str): The code to be stripped.
-
-        Returns:
-            str: The stripped code.
-            imports: The imports that were stripped.
-        """
-        # Parse the input code
-        node = ast.parse(code)
-
-        # Filter out import statements from the body
-        new_body = [n for n in node.body if not isinstance(n, (ast.Import, ast.ImportFrom))]
-
-        # Select the import statements exclusively
-        import_statements = [n for n in node.body if isinstance(n, (ast.Import, ast.ImportFrom))]
-
-        # Replace the original body with the filtered body
-        node.body = new_body
-
-        # Unparse the modified AST back to code
-        stripped_code_module = ast.Module(body=new_body, type_ignores=[])
-        imports_module = ast.Module(body=import_statements, type_ignores=[])
-
-        stripped_code = ast.unparse(stripped_code_module).strip()
-        imports_code = ast.unparse(imports_module).strip()
-        return stripped_code, [ele.strip() for ele in imports_code.split("\n")]
+        source_code = replace_newline_chars(source_code)
+        source_code = re.sub(r"\\\"", '"', source_code)
+        source_code = source_code.strip()
+        return source_code
