@@ -39,7 +39,7 @@ def build_github_tools(github_repo, llm) -> List[Tool]:
             name="list-issues",
             func=lambda input_str: list_issues(github_repo),
             description="Lists all issues in the specified repository. No input necessary.",
-            return_direct=False,
+            return_direct=True,
         ),
         Tool(
             name="create-issue",
@@ -56,7 +56,8 @@ def build_github_tools(github_repo, llm) -> List[Tool]:
         Tool(
             name="read-issue",
             func=lambda input_str: read_issue(input_str, github_repo),
-            description="Returns the issue title, body, and discussion. Input should be issue number.",
+            description="Returns the issue title, body, and discussion. Input should be issue number string.",
+            return_direct=True,
         ),
     ]
     return tools
@@ -64,7 +65,7 @@ def build_github_tools(github_repo, llm) -> List[Tool]:
 
 def list_issues(github_repo) -> str:
     try:
-        issues = github_repo.get_issues(state="all")
+        issues = github_repo.get_issues(state="open")
         result = "Issues:\n"
         for issue in issues:
             result += f"#{issue.number} - {issue.title}\n"
