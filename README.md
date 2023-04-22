@@ -1,11 +1,14 @@
 
 # Overview
 
-The improved-spork project is an AI software engineering assistant that helps developers contribute clean, high-quality code to GitHub repositories. It provides the following functionality:
+The improved-spork project is an AI software engineering assistant that helps developers contribute clean, high-quality code to GitHub repositories. The codebase is organized into the following main components:
 
-- Automatically log into GitHub using an API key
-- List repositories and issues
-- Utilize an AI agent along with various tools (Python REPL, Terminal, and others) to close issues while adhering to the user's instructions
+- **spork**: The main directory containing the core functionality of the project. It includes tools, agents, and utility functions.
+- **tools**: A subdirectory within spork containing various tools such as git_tools, navigator_tool, and others.
+- **agents**: A subdirectory within spork containing AI agents that interact with the tools to perform tasks.
+- **scripts**: A subdirectory within spork containing the main script to run the software engineering assistant.
+
+To get started with the project, follow the instructions in the Getting Started section below.
 
 # Getting Started
 
