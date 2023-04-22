@@ -2,22 +2,16 @@
 import os
 import sys
 import traceback
-from typing import TextIO, cast
 
 from git import Repo
-from langchain.agents import AgentType, initialize_agent, load_tools
+from langchain.agents import AgentType, initialize_agent
 from langchain.chat_models import ChatOpenAI
 from langchain.memory import ConversationBufferMemory, ReadOnlySharedMemory
 
-from spork.tools.git_tools import GitToolBuilder
-
 # Log into GitHub
-from spork.tools.oracles.codebase_oracle_tool import CodebaseOracleToolBuilder
-from spork.tools.oracles.langchain_oracle_tool import LangchainDocumentationOracleTool
-from spork.tools.text_editor.text_editor_tool import TextEditorTool
-from spork.utils import PassThroughBuffer, choose_work_item, login_github
-
-from .agents.text_editor_agent import make_text_editor_agent
+from spork.utils import login_github
+from .agents.git_manager_agent import GitManagerAgent
+from .agents.github_manager_agent import GithubManagerAgent
 from .config import (
     DEFAULT_BRANCH_NAME,
     DO_RETRY,
@@ -26,7 +20,6 @@ from .config import (
     REPOSITORY_NAME,
 )
 from .prompts import make_execution_task, make_planning_task
-from .tools.navigator_tool import LocalNavigatorTool
 
 print("Logging into github")
 github_client = login_github(GITHUB_API_KEY)
@@ -42,33 +35,15 @@ if pygit_repo.active_branch.name != DEFAULT_BRANCH_NAME:
     pygit_repo.git.checkout(DEFAULT_BRANCH_NAME)
 
 
-work_item = choose_work_item(github_repo)
+llm1 = ChatOpenAI(streaming=True, temperature=0.1, model_name="gpt-4")
 
-
-llm1 = ChatOpenAI(streaming=True, temperature=0.7, model_name="gpt-4")
-llm2 = ChatOpenAI(streaming=True, temperature=0.7, model_name="gpt-4")
-
-pass_through_buffer = PassThroughBuffer(sys.stdout)
 memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
 readonlymemory = ReadOnlySharedMemory(memory=memory)
-assert pass_through_buffer.saved_output == ""
-sys.stdout = cast(TextIO, pass_through_buffer)
 
 # TOOLS
-codebase_oracle_builder = CodebaseOracleToolBuilder(os.getcwd(), llm2, readonlymemory)
-codebase_oracle_tool = codebase_oracle_builder.build()
-langchain_oracle_tool = LangchainDocumentationOracleTool(llm2, readonlymemory)
-local_navigator_tool = LocalNavigatorTool(llm2)
-planning_tools = [codebase_oracle_tool, langchain_oracle_tool]
-
-
-text_editor_agent = make_text_editor_agent(llm2, readonlymemory, codebase_oracle_builder)
-text_editor_tool = TextEditorTool(text_editor_agent)
-
-
-base_tools = load_tools(["human"], llm=llm2)
-git_tools = GitToolBuilder(github_repo, pygit_repo, work_item).build_tools()
-exec_tools = base_tools + git_tools + planning_tools + [text_editor_tool]
+git_manager = GitManagerAgent(llm1, pygit_repo, memory=readonlymemory)
+github_manager = GithubManagerAgent(llm1, github_repo, memory=readonlymemory)
+planning_tools = [git_manager, github_manager]
 
 # AGENTS
 plan_agent = initialize_agent(
@@ -78,6 +53,8 @@ plan_agent = initialize_agent(
     verbose=True,
     memory=memory,
 )
+
+breakpoint()
 
 exec_agent = initialize_agent(
     exec_tools, llm1, agent=AgentType.CHAT_ZERO_SHOT_REACT_DESCRIPTION, verbose=True

@@ -90,20 +90,6 @@ def choose_work_item(
     return work_items[choice_index]
 
 
-# this is probably not a good idea but it works for now
-class PassThroughBuffer:
-    def __init__(self, buffer):
-        self.saved_output = ""
-        self.original_buffer = buffer
-
-    def write(self, message):
-        self.saved_output += message
-        self.original_buffer.write(message)
-
-    def __getattr__(self, attr):
-        return getattr(self.original_buffer, attr)
-
-
 def _get_chat_history(chat_history: List[Tuple[HumanMessage, AIMessage]]) -> str:
     buffer = ""
     for human_m, ai_m in chat_history:
