@@ -53,6 +53,11 @@ def build_github_tools(github_repo, llm) -> List[Tool]:
             description="Creates a pull request for an issue. Input should be issue number.",
             return_direct=False,
         ),
+        Tool(
+            name="read-issue",
+            func=lambda input_str: read_issue(input_str, github_repo),
+            description="Returns the issue title, body, and discussion. Input should be issue number.",
+        ),
     ]
     return tools
 
@@ -92,5 +97,18 @@ def create_pull_request(input_str: str, github_repo) -> str:
 
         pull_request = issue.create_pull(base=default_branch, head=current_branch, issue=issue)
         return f"Created pull request: #{pull_request.number} - {pull_request.title}"
+    except Exception as e:
+        return f"Error: {e}"
+
+
+def read_issue(input_str, github_repo):
+    try:
+        issue_number = int(input_str)
+        issue = github_repo.get_issue(number=issue_number)
+        comments = issue.get_comments()
+        issue_str = f"#{issue.number} - {issue.title}\n\n{issue.body}\n\n"
+        for comment in comments:
+            issue_str += f"{comment.user.login} said: {comment.body}\n"
+        return issue_str
     except Exception as e:
         return f"Error: {e}"

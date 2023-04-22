@@ -1,7 +1,7 @@
 from typing import List, Optional
 
 import git
-from langchain.agents import Tool, AgentType, initialize_agent
+from langchain.agents import AgentType, Tool, initialize_agent
 from langchain.chat_models import ChatOpenAI
 from langchain.memory import ReadOnlySharedMemory
 
@@ -56,7 +56,8 @@ def build_tools(pygit_repo) -> List[Tool]:
         Tool(
             name="list-branches",
             func=lambda input_str: list_branches(pygit_repo),
-            description="Lists all branches in the specified repository. No input necessary."
+            description="Lists all branches in the specified repository. No input necessary.",
+        ),
     ]
     return tools
 
@@ -94,6 +95,7 @@ def commit_to_git(file_names: str, pygit_repo) -> str:
         return f"Committed {file_names}"
     except Exception as e:
         return f"Error: {e}"
+
 
 def list_branches(pygit_repo) -> str:
     try:
