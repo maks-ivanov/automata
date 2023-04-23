@@ -22,7 +22,7 @@ import os
 from ast import AsyncFunctionDef, ClassDef, FunctionDef, Module
 from typing import Dict, Optional, Union, cast
 
-from spork.tools.utils import root_path
+from spork.core.utils import root_path
 
 logger = logging.getLogger(__name__)
 
@@ -135,11 +135,9 @@ class PythonIndexer:
             for node in module.body:
                 if isinstance(node, ClassDef):
                     result += " " * LINE_SPACING + " - " + node.name + "\n"
-                    for subnode in node.body:
-                        if isinstance(subnode, FunctionDef):
-                            result += " " * 2 * LINE_SPACING + " -- " + subnode.name + "\n"
-                        elif isinstance(subnode, AsyncFunctionDef):
-                            result += " " * 2 * LINE_SPACING + " -- " + subnode.name + "\n"
+                    # for subnode in node.body:
+                    #     if isinstance(subnode, FunctionDef) or isinstance(subnode, AsyncFunctionDef):
+                    #         result += " " * 2 * LINE_SPACING + " -- " + subnode.name + "\n"
                 elif isinstance(node, FunctionDef) or isinstance(node, AsyncFunctionDef):
                     result += " " * LINE_SPACING + " - " + node.name + "\n"
 

@@ -16,7 +16,7 @@ from langchain.chat_models import ChatOpenAI
 from langchain.document_loaders import WebBaseLoader
 from langchain.embeddings import OpenAIEmbeddings
 
-from ..utils import get_logging_config
+from ...core.utils import get_logging_config
 
 logger = logging.getLogger(__name__)
 
@@ -43,17 +43,16 @@ class DocumentationGPT:
         logging.config.dictConfig(logging_config)
         self.logger = logging.getLogger(__name__)
 
-    def run(self):
+    def run(self, input_text):
         self.logger.info(
             f"Starting chat session for {self.url} using {self.model} with t={self.temperature}..."
         )
         while True:
             try:
-                query = input("You: ")
-                result = self.chain({"question": query, "chat_history": self.chat_history})
+                result = self.chain({"question": input_text, "chat_history": self.chat_history})
                 answer = result["answer"]
                 self.logger.info(f"DocGPT: {answer}")
-                self.chat_history += [(query, answer)]
+                self.chat_history += [(input_text, answer)]
             except KeyboardInterrupt:
                 self.logger.info("Ending chat session...")
                 break

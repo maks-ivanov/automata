@@ -1,12 +1,13 @@
 import argparse
 import logging
 import logging.config
+from typing import Dict
 
-from spork.agents.agent_configs.agent_version import AgentVersion
-from spork.agents.mr_meeseeks_agent import MrMeeseeksAgent
+from spork.configs.agent_configs import AgentVersion
+from spork.core import Toolkit, ToolkitType, load_llm_toolkits
+from spork.core.agents.mr_meeseeks_agent import MrMeeseeksAgent
+from spork.core.utils import get_logging_config, root_py_path
 from spork.tools.python_tools.python_indexer import PythonIndexer
-from spork.tools.tool_managers.tool_utils import load_llm_tools
-from spork.tools.utils import get_logging_config, root_py_path
 
 
 def main():
@@ -19,7 +20,7 @@ def main():
     parser.add_argument(
         "--version",
         type=AgentVersion,
-        default=AgentVersion.MEESEEKS_MASTER_V1,
+        default=AgentVersion.MEESEEKS_MASTER_V2,
         help="The version of the agent.",
     )
     parser.add_argument(
@@ -38,10 +39,10 @@ def main():
         "--stream", type=bool, default=True, help="Should we stream the responses?"
     )
     parser.add_argument(
-        "--tools",
+        "--toolkits",
         type=str,
         default="python_indexer,python_writer,codebase_oracle",
-        help="Comma-separated list of tools to be used.",
+        help="Comma-separated list of toolkits to be used.",
     )
 
     args = parser.parse_args()
@@ -53,7 +54,9 @@ def main():
     ), "You must provide either instructions for the agent or a session_id."
 
     inputs = {"documentation_url": args.documentation_url, "model": args.model}
-    _, exec_tools = load_llm_tools(args.tools.split(","), inputs, logger)
+    llm_toolkits: Dict[ToolkitType, Toolkit] = load_llm_toolkits(
+        args.toolkits.split(","), inputs, logger
+    )
     indexer = PythonIndexer(root_py_path())
 
     initial_payload = {
@@ -65,7 +68,7 @@ def main():
     agent = MrMeeseeksAgent(
         initial_payload=initial_payload,
         instructions=args.instructions,
-        tools=exec_tools,
+        llm_toolkits=llm_toolkits,
         version=args.version,
         model=args.model,
         session_id=args.session_id,
@@ -74,10 +77,13 @@ def main():
 
     logger.info("Running the agent now...")
     if args.session_id is None:
-        agent.run()
+        logger.info("Running...")
+        result = agent.run()
+        logger.info("Result: %s", result)
     else:
         logger.info("Replaying messages...")
-        agent.replay_messages()
+        result = agent.replay_messages()
+        logger.info("Result: %s", result)
 
     while True:
         user_input = input(
