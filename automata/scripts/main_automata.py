@@ -8,7 +8,7 @@ from termcolor import colored
 from automata.configs.agent_configs import AutomataConfigVersion
 from automata.core import Toolkit, ToolkitType, load_llm_toolkits
 from automata.core.agents.automata_agent import AutomataAgentBuilder, AutomataAgentConfig
-from automata.core.utils import get_logging_config, root_py_path
+from automata.core.utils import get_issue_body, get_logging_config, root_py_path
 from automata.tools.python_tools.python_indexer import PythonIndexer
 
 
@@ -74,6 +74,13 @@ def main():
     llm_toolkits: Dict[ToolkitType, Toolkit] = load_llm_toolkits(
         args.toolkits.split(","), **inputs
     )
+
+    if args.instructions.isdigit():
+        issue_number = int(args.instructions)
+        instructions = get_issue_body(issue_number)
+    else:
+        instructions = args.instructions
+
     if args.include_overview:
         indexer = PythonIndexer(root_py_path())
 
@@ -93,7 +100,7 @@ def main():
     agent = (
         AutomataAgentBuilder(agent_config)
         .with_initial_payload(initial_payload)
-        .with_instructions(args.instructions)
+        .with_instructions(instructions)
         .with_llm_toolkits(llm_toolkits)
         .with_model(args.model)
         .with_session_id(args.session_id)
