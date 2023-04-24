@@ -13,7 +13,6 @@ from automata.tools.python_tools.python_indexer import PythonIndexer
 
 
 def main():
-
     parser = argparse.ArgumentParser(description="Run the AutomataAgent.")
     parser.add_argument("--instructions", type=str, help="The initial instructions for the agent.")
     parser.add_argument(
