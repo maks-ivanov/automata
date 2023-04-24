@@ -13,9 +13,6 @@ from automata.tools.python_tools.python_indexer import PythonIndexer
 
 
 def main():
-    logging_config = get_logging_config()
-    logging.config.dictConfig(logging_config)
-    logger = logging.getLogger(__name__)
 
     parser = argparse.ArgumentParser(description="Run the AutomataAgent.")
     parser.add_argument("--instructions", type=str, help="The initial instructions for the agent.")
@@ -74,7 +71,6 @@ def main():
     assert not (
         args.instructions and args.session_id
     ), "You must provide either instructions for the agent or a session_id."
-
     inputs = {"documentation_url": args.documentation_url, "model": args.model}
     llm_toolkits: Dict[ToolkitType, Toolkit] = load_llm_toolkits(
         args.toolkits.split(","), **inputs
