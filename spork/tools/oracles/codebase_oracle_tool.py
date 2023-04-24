@@ -1,12 +1,14 @@
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
 from langchain import FAISS, PromptTemplate
 from langchain.agents import Tool
 from langchain.chains import ConversationalRetrievalChain
+from langchain.chat_models import ChatOpenAI
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.llms.base import BaseLLM
-from langchain.memory import ReadOnlySharedMemory
+from langchain.memory import ConversationBufferMemory, ReadOnlySharedMemory
 from langchain.schema import Document
 from langchain.text_splitter import CharacterTextSplitter
 
@@ -66,15 +68,15 @@ class CodebaseOracleToolBuilder:
                             docs.extend(loader.load())
                         except Exception as e:
                             print(dirpath, file, e)
-        text_splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+        text_splitter = CharacterTextSplitter(chunk_size=5000, chunk_overlap=50, separator="\n")
         texts = text_splitter.split_documents(docs)
         docsearch = FAISS.from_documents(texts, embeddings)
         self._chain = ConversationalRetrievalChain.from_llm(
             llm=self.llm,
-            retriever=docsearch.as_retriever(search_type="mmr"),
+            retriever=docsearch.as_retriever(),
             qa_prompt=QA_PROMPT,
             memory=self.memory,
-            return_source_documents=True,
+            return_source_documents=False,
             get_chat_history=_get_chat_history,
         )
 
@@ -110,8 +112,23 @@ class CodebaseOracleToolBuilder:
             "buck-out",
             "random",
             "sqlite",
+            ".DS_Store",
         ]
         for exclusion in exclusions:
             if exclusion in path:
                 return True
         return False
+
+
+if __name__ == "__main__":
+    load_dotenv()
+    llm = ChatOpenAI(streaming=True, temperature=0, model_name="gpt-4")
+    memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+    memory = ReadOnlySharedMemory(memory=memory)
+    builder = CodebaseOracleToolBuilder(
+        codebase_path="/Users/ivanovm/proj/improved-spork/",
+        llm=llm,
+        memory=memory,
+    )
+    tool = builder.build()
+    breakpoint()
