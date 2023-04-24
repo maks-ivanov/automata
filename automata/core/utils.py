@@ -1,6 +1,6 @@
-"""This module provides functions to interact with the GitHub API, specifically to list repositories, issues, and pull requests,
-choose a work item to work on, and remove HTML tags from text."""
+from github import Github
 
+"This module provides functions to interact with the GitHub API, specifically to list repositories, issues, and pull requests,\nchoose a work item to work on, and remove HTML tags from text."
 import logging
 import os
 from typing import Any, List
@@ -117,7 +117,6 @@ def check_similarity(content_a: str, content_b: str) -> float:
     resp = openai.Embedding.create(
         input=[content_a, content_b], engine="text-similarity-davinci-001"
     )
-
     embedding_a = resp["data"][0]["embedding"]
     embedding_b = resp["data"][1]["embedding"]
     similarity = np.dot(embedding_a, embedding_b) / (
@@ -132,7 +131,7 @@ class NumberedLinesTextLoader(TextLoader):
         with open(self.file_path, encoding=self.encoding) as f:
             lines = f.readlines()
             text = f"{self.file_path}"
-            for i, line in enumerate(lines):
+            for (i, line) in enumerate(lines):
                 text += f"{i}: {line}"
         metadata = {"source": self.file_path}
         return [Document(page_content=text, metadata=metadata)]
@@ -144,3 +143,12 @@ def clean_agent_result(result: str) -> str:
     result = result.replace("}", "")[1:-1]
     result = result.replace("\\n", "\n").strip()
     return result
+
+
+def get_issue_body(issue_number: int) -> str:
+    access_token = os.environ["GITHUB_API_KEY"]
+    repo_name = os.environ["REPOSITORY_NAME"]
+    g = Github(access_token)
+    repo = g.get_repo(repo_name)
+    issue = repo.get_issue(issue_number)
+    return issue.body
