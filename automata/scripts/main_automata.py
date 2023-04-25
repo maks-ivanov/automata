@@ -1,7 +1,6 @@
 import argparse
 import logging
 import logging.config
-import os
 import subprocess
 from typing import Dict
 
@@ -154,10 +153,7 @@ def main():
             break
         if user_input.lower() == "diff":
             # get git diff
-            git_diff_output = subprocess.run(
-                ["git", "diff"], stdout=subprocess.PIPE, cwd=os.getcwd(), text=True
-            ).stdout
-            print(git_diff_output)
+            subprocess.run(["git", "diff"], shell=True)
             continue
         if user_input.lower() == "submit":
             try:

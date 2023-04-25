@@ -1,4 +1,5 @@
 import subprocess
+import webbrowser
 
 import git
 from github import Github
@@ -193,7 +194,8 @@ def create_pull_request(base: str, head: str, issue_number: int):
     """
     issue = _github_repo_obj.get_issue(issue_number)
     pr = _github_repo_obj.create_pull(base=base, head=head, issue=issue)
-    return f"Created pull request for issue #{issue_number} - {pr.url}."
+    webbrowser.open(pr.html_url)
+    return f"Created pull request for issue #{issue_number} - {pr.html_url}."
 
 
 def rollback(base, head):
