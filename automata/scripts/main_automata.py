@@ -90,7 +90,7 @@ def main():
     else:
         initial_payload = {}
     logger.info(
-        f"Passing in instructions:\n{colored(args.instructions, color='white', on_color='on_green')}"
+        f"Passing in instructions:\n{colored(instructions, color='white', on_color='on_green')}"
     )
     logger.info("-" * 60)
 

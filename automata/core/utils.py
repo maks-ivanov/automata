@@ -150,16 +150,3 @@ def get_issue_body(issue_number: int) -> str:
     repo = g.get_repo(repo_name)
     issue = repo.get_issue(issue_number)
     return issue.body
-
-
-def check_similarity(content_a: str, content_b: str) -> float:
-    resp = openai.Embedding.create(
-        input=[content_a, content_b], engine="text-similarity-davinci-001"
-    )
-    embedding_a = resp["data"][0]["embedding"]
-    embedding_b = resp["data"][1]["embedding"]
-    similarity = np.dot(embedding_a, embedding_b).item()
-    normalized_similarity = similarity / (
-        np.linalg.norm(embedding_a) * np.linalg.norm(embedding_b)
-    )
-    return normalized_similarity
