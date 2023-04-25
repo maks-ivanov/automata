@@ -119,14 +119,16 @@ def run_retrieval_chain_with_sources_format(
 
 
 def compute_similarity(content_a: str, content_b: str) -> float:
-    """Checks the similarity between two pieces of text using OpenAI Embeddings."""
     resp = openai.Embedding.create(
         input=[content_a, content_b], engine="text-similarity-davinci-001"
     )
     embedding_a = resp["data"][0]["embedding"]
     embedding_b = resp["data"][1]["embedding"]
     similarity = np.dot(embedding_a, embedding_b).item()
-    return similarity
+    magnitude_a = np.linalg.norm(embedding_a)
+    magnitude_b = np.linalg.norm(embedding_b)
+    normalized_similarity = similarity / (magnitude_a * magnitude_b)
+    return normalized_similarity
 
 
 class NumberedLinesTextLoader(TextLoader):
@@ -228,10 +230,7 @@ def submit(base, issue_number):
     """Commit changes and open a PR"""
     work_branch = get_current_branch()
     subprocess.run("pre-commit run --all-files", shell=True)
-    # commit
     _local_repo_obj.git.add("-A")
     _local_repo_obj.git.commit("-m", f"Work for issue #{issue_number}", "--no-verify")
-    # push
     _local_repo_obj.git.push("origin", work_branch)
-    # create PR
     return create_pull_request(base, work_branch, issue_number)
