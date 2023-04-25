@@ -198,10 +198,7 @@ class AutomataAgent:
             stream=self.stream,
         )
         if self.stream:
-            print(
-                colored("\n>>>", "green", attrs=["blink"])
-                + colored(f" {self.name} Agent:", "green")
-            )
+            print(colored(f"\n>>> {self.name} Agent:", "green"))
             accumulated_output = ""
             separator = " "
             response_text = ""
