@@ -1,4 +1,7 @@
+import git
 from github import Github
+
+from automata.config import REPOSITORY_PATH, GITHUB_API_KEY, REPOSITORY_NAME
 
 "This module provides functions to interact with the GitHub API, specifically to list repositories, issues, and pull requests,\nchoose a work item to work on, and remove HTML tags from text."
 import logging
@@ -129,7 +132,7 @@ class NumberedLinesTextLoader(TextLoader):
         with open(self.file_path, encoding=self.encoding) as f:
             lines = f.readlines()
             text = f"{self.file_path}"
-            for i, line in enumerate(lines):
+            for (i, line) in enumerate(lines):
                 text += f"{i}: {line}"
         metadata = {"source": self.file_path}
         return [Document(page_content=text, metadata=metadata)]
@@ -142,11 +145,82 @@ def clean_agent_result(result: str) -> str:
     result = result.replace("\\n", "\n").strip()
     return result
 
+_github_client = Github(GITHUB_API_KEY)
+_github_repo_obj = _github_client.get_repo(REPOSITORY_NAME)
+_local_repo_obj = git.Repo(REPOSITORY_PATH)
 
 def get_issue_body(issue_number: int) -> str:
-    access_token = os.environ["GITHUB_API_KEY"]
-    repo_name = os.environ["REPOSITORY_NAME"]
-    g = Github(access_token)
-    repo = g.get_repo(repo_name)
-    issue = repo.get_issue(issue_number)
+    """Get the body of an issue from the GitHub API.
+
+    Args:
+        issue_number (int): The number of the issue.
+    """
+    issue = _github_repo_obj.get_issue(issue_number)
     return issue.body
+
+
+def create_branch(branch_name: str) -> str:
+    """Create and checkout a new branch using the GitPython library.
+
+    Args:
+        branch_name (str): The name of the new branch.
+    """
+    _local_repo_obj.git.branch(branch_name)
+    return f"Created branch {branch_name}."
+
+def checkout_branch(branch_name: str) -> str:
+    """Checkout a branch using the GitPython library.
+
+    Args:
+        branch_name (str): The name of the branch to checkout.
+    """
+    _local_repo_obj.git.checkout(branch_name)
+    return f"Checked out branch {branch_name}."
+
+def create_pull_request(base: str, head: str, issue_number: int):
+    """Create a pull request using the GitHub API.
+
+    Args:
+        base (str): The base branch of the pull request.
+        head (str): The head branch of the pull request.
+        issue_number (int): The number of the issue the pull request is for.
+    """
+    issue = _github_repo_obj.get_issue(issue_number)
+    pr = _github_repo_obj.create_pull(base=base, head=head, issue=issue)
+    return f"Created pull request for issue #{issue_number} - {pr.url}."
+
+def rollback(base, head):
+    """
+        Roll back changes, checks out base, deletes head
+    """
+    _local_repo_obj.git.reset("--hard")
+    _local_repo_obj.git.checkout(base)
+    _local_repo_obj.git.branch("-D", head)
+    return f"Rolled back changes, checked out {base}, deleted {head}."
+
+def get_current_branch() -> str:
+    """Get the name of the current branch."""
+    return _local_repo_obj.active_branch.name
+
+def validate_work_branch(work_branch: str) -> bool:
+    """Validate that the work branch is in the correct format."""
+    current_branch = get_current_branch()
+    repo = git.Repo(REPOSITORY_PATH)
+    if current_branch == work_branch:
+        raise ValueError(f"Work branch {work_branch} cannot be the same as the current branch.")
+    if work_branch in [branch.name for branch in repo.branches()]:
+        raise ValueError(f"Work branch {work_branch} already exists.")
+    return True
+
+
+def submit(base, issue_number):
+    """Commit changes and open a PR"""
+    work_branch = get_current_branch()
+    # commit
+    _local_repo_obj.git.add("-A")
+    _local_repo_obj.git.commit("-m", f"Work for issue #{issue_number}")
+    # push
+    _local_repo_obj.git.push("origin", work_branch)
+    # create PR
+    return create_pull_request(base, work_branch, issue_number)
+

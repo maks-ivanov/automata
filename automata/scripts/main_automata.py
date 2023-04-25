@@ -10,7 +10,8 @@ from termcolor import colored
 from automata.configs.agent_configs import AutomataConfigVersion
 from automata.core import Toolkit, ToolkitType, load_llm_toolkits
 from automata.core.agents.automata_agent import AutomataAgentBuilder, AutomataAgentConfig
-from automata.core.utils import get_issue_body, get_logging_config, root_py_path
+from automata.core.utils import get_issue_body, get_logging_config, root_py_path, validate_work_branch, create_branch, \
+    get_current_branch, checkout_branch, submit, rollback
 from automata.tools.python_tools.python_indexer import PythonIndexer
 
 
@@ -18,7 +19,7 @@ def main():
     parser = argparse.ArgumentParser(description="Run the AutomataAgent.")
     parser.add_argument("--instructions", type=str, help="The initial instructions for the agent.")
     parser.add_argument(
-        "--config_version",
+        "--config-version",
         type=AutomataConfigVersion,
         default=AutomataConfigVersion.AUTOMATA_MASTER_V3,
         help="The config version of the agent.",
@@ -27,7 +28,7 @@ def main():
         "--model", type=str, default="gpt-4", help="The model to be used for the agent."
     )
     parser.add_argument(
-        "--documentation_url",
+        "--documentation-url",
         type=str,
         default="https://python.langchain.com/en/latest",
         help="The model to be used for the agent.",
@@ -45,11 +46,18 @@ def main():
         help="Comma-separated list of toolkits to be used.",
     )
     parser.add_argument(
-        "--include_overview",
+        "--include-overview",
         type=bool,
         default=False,
         help="Should the instruction prompt include an overview?",
     )
+    parser.add_argument(
+        "--work-branch",
+        type=str,
+        default=None,
+        help="The branch to be used for the agent's work.",
+    )
+
 
     parser.add_argument("-v", "--verbose", action="store_true", help="increase output verbosity")
 
@@ -77,6 +85,7 @@ def main():
         args.toolkits.split(","), **inputs
     )
 
+    issue_number = None
     if args.instructions.isdigit():
         issue_number = int(args.instructions)
         instructions = get_issue_body(issue_number)
@@ -91,6 +100,17 @@ def main():
         }
     else:
         initial_payload = {}
+
+    work_branch, base_branch = None, None
+    if args.work_branch is not None:
+        validate_work_branch(args.work_branch)
+        base_branch = get_current_branch()
+        work_branch = args.work_branch
+        create_branch(work_branch)
+        checkout_branch(work_branch)
+
+
+
     logger.info(
         f"Passing in instructions:\n{colored(instructions, color='white', on_color='on_green')}"
     )
@@ -121,8 +141,11 @@ def main():
 
     while True:
         user_input = input(
-            "Do you have any further instructions or feedback? Type 'diff' to see the changes. Type 'exit' to terminate: "
+            "Do you have any further instructions or feedback? Type 'exit' to terminate: "
         )
+        if user_input.lower() == "exit":
+            print("Exiting...")
+            break
         if user_input.lower() == "diff":
             # get git diff
             git_diff_output = subprocess.run(
@@ -130,8 +153,20 @@ def main():
             ).stdout
             print(git_diff_output)
             continue
-        if user_input.lower() == "exit":
-            break
+        if user_input.lower() == "submit":
+            if issue_number and work_branch:
+                pr_result = submit(base_branch, issue_number)
+                print(pr_result)
+            else:
+                print("Cannot submit automatically without an issue number and work branch. Please submit manually.")
+            continue
+        if user_input.lower() == "rollback":
+            print("Rolling back changes...")
+            if work_branch and base_branch:
+                rollback(base_branch, work_branch)
+            else:
+                print("Cannot rollback automatically without a work branch. Please rollback manually.")
+            continue
         else:
             instructions = [{"role": "user", "content": user_input}]
             agent.modify_last_instruction(instructions)
