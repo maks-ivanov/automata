@@ -1,7 +1,7 @@
 import git
 from github import Github
 
-from automata.config import REPOSITORY_PATH, GITHUB_API_KEY, REPOSITORY_NAME
+from automata.config import GITHUB_API_KEY, REPOSITORY_NAME, REPOSITORY_PATH
 
 "This module provides functions to interact with the GitHub API, specifically to list repositories, issues, and pull requests,\nchoose a work item to work on, and remove HTML tags from text."
 import logging
@@ -132,7 +132,7 @@ class NumberedLinesTextLoader(TextLoader):
         with open(self.file_path, encoding=self.encoding) as f:
             lines = f.readlines()
             text = f"{self.file_path}"
-            for (i, line) in enumerate(lines):
+            for i, line in enumerate(lines):
                 text += f"{i}: {line}"
         metadata = {"source": self.file_path}
         return [Document(page_content=text, metadata=metadata)]
@@ -145,9 +145,11 @@ def clean_agent_result(result: str) -> str:
     result = result.replace("\\n", "\n").strip()
     return result
 
+
 _github_client = Github(GITHUB_API_KEY)
 _github_repo_obj = _github_client.get_repo(REPOSITORY_NAME)
 _local_repo_obj = git.Repo(REPOSITORY_PATH)
+
 
 def get_issue_body(issue_number: int) -> str:
     """Get the body of an issue from the GitHub API.
@@ -168,6 +170,7 @@ def create_branch(branch_name: str) -> str:
     _local_repo_obj.git.branch(branch_name)
     return f"Created branch {branch_name}."
 
+
 def checkout_branch(branch_name: str) -> str:
     """Checkout a branch using the GitPython library.
 
@@ -176,6 +179,7 @@ def checkout_branch(branch_name: str) -> str:
     """
     _local_repo_obj.git.checkout(branch_name)
     return f"Checked out branch {branch_name}."
+
 
 def create_pull_request(base: str, head: str, issue_number: int):
     """Create a pull request using the GitHub API.
@@ -189,18 +193,21 @@ def create_pull_request(base: str, head: str, issue_number: int):
     pr = _github_repo_obj.create_pull(base=base, head=head, issue=issue)
     return f"Created pull request for issue #{issue_number} - {pr.url}."
 
+
 def rollback(base, head):
     """
-        Roll back changes, checks out base, deletes head
+    Roll back changes, checks out base, deletes head
     """
     _local_repo_obj.git.reset("--hard")
     _local_repo_obj.git.checkout(base)
     _local_repo_obj.git.branch("-D", head)
     return f"Rolled back changes, checked out {base}, deleted {head}."
 
+
 def get_current_branch() -> str:
     """Get the name of the current branch."""
     return _local_repo_obj.active_branch.name
+
 
 def validate_work_branch(work_branch: str) -> bool:
     """Validate that the work branch is in the correct format."""
@@ -223,4 +230,3 @@ def submit(base, issue_number):
     _local_repo_obj.git.push("origin", work_branch)
     # create PR
     return create_pull_request(base, work_branch, issue_number)
-

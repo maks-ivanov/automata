@@ -10,8 +10,17 @@ from termcolor import colored
 from automata.configs.agent_configs import AutomataConfigVersion
 from automata.core import Toolkit, ToolkitType, load_llm_toolkits
 from automata.core.agents.automata_agent import AutomataAgentBuilder, AutomataAgentConfig
-from automata.core.utils import get_issue_body, get_logging_config, root_py_path, validate_work_branch, create_branch, \
-    get_current_branch, checkout_branch, submit, rollback
+from automata.core.utils import (
+    checkout_branch,
+    create_branch,
+    get_current_branch,
+    get_issue_body,
+    get_logging_config,
+    rollback,
+    root_py_path,
+    submit,
+    validate_work_branch,
+)
 from automata.tools.python_tools.python_indexer import PythonIndexer
 
 
@@ -57,7 +66,6 @@ def main():
         default=None,
         help="The branch to be used for the agent's work.",
     )
-
 
     parser.add_argument("-v", "--verbose", action="store_true", help="increase output verbosity")
 
@@ -109,8 +117,6 @@ def main():
         create_branch(work_branch)
         checkout_branch(work_branch)
 
-
-
     logger.info(
         f"Passing in instructions:\n{colored(instructions, color='white', on_color='on_green')}"
     )
@@ -158,14 +164,18 @@ def main():
                 pr_result = submit(base_branch, issue_number)
                 print(pr_result)
             else:
-                print("Cannot submit automatically without an issue number and work branch. Please submit manually.")
+                print(
+                    "Cannot submit automatically without an issue number and work branch. Please submit manually."
+                )
             continue
         if user_input.lower() == "rollback":
             print("Rolling back changes...")
             if work_branch and base_branch:
                 rollback(base_branch, work_branch)
             else:
-                print("Cannot rollback automatically without a work branch. Please rollback manually.")
+                print(
+                    "Cannot rollback automatically without a work branch. Please rollback manually."
+                )
             continue
         else:
             instructions = [{"role": "user", "content": user_input}]
