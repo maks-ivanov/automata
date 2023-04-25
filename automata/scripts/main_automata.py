@@ -160,13 +160,16 @@ def main():
             print(git_diff_output)
             continue
         if user_input.lower() == "submit":
-            if issue_number and work_branch:
-                pr_result = submit(base_branch, issue_number)
-                print(pr_result)
-            else:
-                print(
-                    "Cannot submit automatically without an issue number and work branch. Please submit manually."
-                )
+            try:
+                if issue_number and work_branch:
+                    pr_result = submit(base_branch, issue_number)
+                    print(pr_result)
+                else:
+                    print(
+                        "Cannot submit automatically without an issue number and work branch. Please submit manually."
+                    )
+            except Exception as e:
+                print(f"Error submitting PR: {e}")
             continue
         if user_input.lower() == "rollback":
             print("Rolling back changes...")
