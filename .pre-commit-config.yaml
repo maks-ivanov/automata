@@ -4,6 +4,7 @@ repos:
     hooks:
       - id: mypy
         additional_dependencies: [types-requests, types-attrs]
+        exclude: '.*sample.*'
   - repo: https://github.com/google/yapf
     rev: v0.31.0
     hooks:
