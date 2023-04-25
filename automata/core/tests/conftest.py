@@ -8,7 +8,7 @@ import pytest
 from automata.configs.agent_configs import AutomataConfigVersion
 from automata.core import load_llm_toolkits
 from automata.core.agents.automata_agent import AutomataAgentBuilder, AutomataAgentConfig
-from automata.core.utils import check_similarity, root_py_path
+from automata.core.utils import compute_similarity, root_py_path
 from automata.tools.python_tools.python_indexer import PythonIndexer
 
 current_file_dir = os.path.dirname(os.path.realpath(__file__))
@@ -53,7 +53,7 @@ def cleanup_and_check(expected_content: str, file_name: str) -> None:
     sample_code_dir = os.path.join(current_file_dir, "sample_code")
     shutil.rmtree(sample_code_dir)
 
-    similarity_score = check_similarity(content, expected_content)
+    similarity_score = compute_similarity(content, expected_content)
     assert similarity_score > 0.85  # Check the similarity score
 
 
