@@ -122,6 +122,19 @@ def compute_similarity(content_a: str, content_b: str) -> float:
     similarity = np.dot(embedding_a, embedding_b).item()
     return similarity
 
+
+class NumberedLinesTextLoader(TextLoader):
+    def load(self) -> List[Document]:
+        """Load from file path."""
+        with open(self.file_path, encoding=self.encoding) as f:
+            lines = f.readlines()
+            text = f"{self.file_path}"
+            for i, line in enumerate(lines):
+                text += f"{i}: {line}"
+        metadata = {"source": self.file_path}
+        return [Document(page_content=text, metadata=metadata)]
+
+
 def clean_agent_result(result: str) -> str:
     """Cleans the result of an agent call."""
     result = result.split('"result_0": ')[1]
