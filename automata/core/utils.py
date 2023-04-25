@@ -215,7 +215,7 @@ def validate_work_branch(work_branch: str) -> bool:
     repo = git.Repo(REPOSITORY_PATH)
     if current_branch == work_branch:
         raise ValueError(f"Work branch {work_branch} cannot be the same as the current branch.")
-    if work_branch in [branch.name for branch in repo.branches()]:
+    if work_branch in [branch.name for branch in repo.branches]:
         raise ValueError(f"Work branch {work_branch} already exists.")
     return True
 
