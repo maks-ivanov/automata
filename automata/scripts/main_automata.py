@@ -153,7 +153,7 @@ def main():
             break
         if user_input.lower() == "diff":
             # get git diff
-            subprocess.run(["git", "diff"], shell=True)
+            subprocess.run(["git diff"], shell=True)
             continue
         if user_input.lower() == "submit":
             try:
