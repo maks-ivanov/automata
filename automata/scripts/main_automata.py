@@ -1,6 +1,8 @@
 import argparse
 import logging
 import logging.config
+import os
+import subprocess
 from typing import Dict
 
 from termcolor import colored
@@ -119,8 +121,15 @@ def main():
 
     while True:
         user_input = input(
-            "Do you have any further instructions or feedback? Type 'exit' to terminate: "
+            "Do you have any further instructions or feedback? Type 'diff' to see the changes. Type 'exit' to terminate: "
         )
+        if user_input.lower() == "diff":
+            # get git diff
+            git_diff_output = subprocess.run(
+                ["git", "diff"], stdout=subprocess.PIPE, cwd=os.getcwd(), text=True
+            ).stdout
+            print(git_diff_output)
+
         if user_input.lower() == "exit":
             break
         else:
