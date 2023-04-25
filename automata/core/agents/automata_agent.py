@@ -25,11 +25,9 @@
         TODO - Add error checking to ensure that we don't terminate when
         our previous result returned an error
 """
-import io
 import logging
 import sqlite3
 import uuid
-from pprint import PrettyPrinter
 from typing import Dict, List, Optional, Tuple
 
 import openai
@@ -216,12 +214,8 @@ class AutomataAgent:
                     # Split the accumulated output into words
                     words = accumulated_output.split(separator)
                     # Print all words except the last one, as it may be an incomplete word
-                    output_buffer = io.StringIO()
-                    pp = PrettyPrinter(stream=output_buffer)
                     for word in words[:-1]:
-                        pp.pprint(word)
-                        pretty_word = output_buffer.getvalue()
-                        print(colored(pretty_word, "green"), end=" ", flush=True)
+                        print(colored(word, "green"), end=" ", flush=True)
                     # Keep the last (potentially incomplete) word for the next iteration
                     accumulated_output = words[-1]
             # Print the last word
