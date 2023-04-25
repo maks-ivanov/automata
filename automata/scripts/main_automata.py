@@ -129,7 +129,7 @@ def main():
                 ["git", "diff"], stdout=subprocess.PIPE, cwd=os.getcwd(), text=True
             ).stdout
             print(git_diff_output)
-
+            continue
         if user_input.lower() == "exit":
             break
         else:

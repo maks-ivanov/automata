@@ -207,6 +207,7 @@ class AutomataAgent:
                     chunk_content = chunk["choices"][0]["delta"]["content"]
                     accumulated_output += chunk_content
                     response_text += chunk_content
+                    accumulated_output = accumulated_output.replace("\\n", "\n")
                 if separator in accumulated_output:
                     # Split the accumulated output into words
                     words = accumulated_output.split(separator)
