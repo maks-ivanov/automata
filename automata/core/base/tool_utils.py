@@ -56,7 +56,7 @@ class ToolkitBuilder:
 
         model = self.inputs.get("model") or "gpt-4"
         documentation_url = self.inputs.get("documentation_url")
-        temperature = self.inputs.get("temperature") or 0.7
+        temperature = self.inputs.get("temperature") or 0
 
         tool_manager: Optional[BaseToolManager] = None
         if toolkit_type == ToolkitType.PYTHON_INDEXER:
