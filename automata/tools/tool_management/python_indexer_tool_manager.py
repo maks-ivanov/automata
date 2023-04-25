@@ -64,7 +64,7 @@ class PythonIndexerToolManager(BaseToolManager):
                 func=lambda module_comma_object_path: self._run_indexer_retrieve_code(
                     module_comma_object_path
                 ),
-                description=f'Returns the code of the python package, module, standalone function, class, or method at the given python path, without docstrings. "No results found" is returned if no match is found.\n For example - suppose the function "my_function" is defined in the file "my_file.py" located in the main working directory, then the correct tool input is my_file,my_function Suppose instead the file is located in a subdirectory called my_directory, then the correct tool input for the parser is "my_directory.my_file,my_function". If the function is defined in a class, MyClass, then the correct tool input is "my_directory.my_file,MyClass.my_function".',
+                description=f'Returns the code of the python package, module, standalone function, class, or method at the given python path, without docstrings. "No results found" is returned if no match is found.\n For example - suppose the function "my_function" is defined in the file "my_file.py" located in the main working directory, then the correct tool input is my_file,my_function Suppose instead the file is located in a subdirectory called my_directory, then the correct tool input for the parser is "my_directory.my_file,my_function". If the function is defined in a class, MyClass, then the correct tool input is "my_directory.my_file,MyClass.my_function". Do not shorten the output of this tool, as it is used as input to other tools.',
                 return_direct=True,
                 verbose=True,
             ),
@@ -73,7 +73,8 @@ class PythonIndexerToolManager(BaseToolManager):
                 func=lambda module_comma_object_path: self._run_indexer_retrieve_docstring(
                     module_comma_object_path
                 ),
-                description=f"Identical to python-indexer-retrieve-code, except returns the docstring instead of raw code.",
+                description=f"Identical to python-indexer-retrieve-code, except returns the docstring instead of raw code."
+                f"Do not shorten the output of this tool, as it is used as input to other tools.",
                 return_direct=True,
                 verbose=True,
             ),
@@ -82,7 +83,8 @@ class PythonIndexerToolManager(BaseToolManager):
                 func=lambda module_comma_object_path: self._run_indexer_retrieve_raw_code(
                     module_comma_object_path
                 ),
-                description=f"Identical to python-indexer-retrieve-code, except returns the raw text (e.g. code + docstrings) of the module.",
+                description=f"Identical to python-indexer-retrieve-code, except returns the raw text (e.g. code + docstrings) of the module."
+                f"Do not shorten the output of this tool, as it is used as input to other tools.",
                 return_direct=True,
                 verbose=True,
             ),
@@ -95,7 +97,8 @@ class PythonIndexerToolManager(BaseToolManager):
             Tool(
                 name="automata-indexer-retrieve-code",
                 func=lambda path_str: self._run_automata_indexer_retrieve_code(path_str),
-                description="Automata parses a natural language query to retrieve the correct code, docstrings, and import statements necessary to solve an abstract task",
+                description="Automata parses a natural language query to retrieve the correct code, docstrings, and import statements necessary to solve an abstract task."
+                "Do not shorten the output of this tool, as it is used as input to other tools.",
             ),
         ]
         return tools

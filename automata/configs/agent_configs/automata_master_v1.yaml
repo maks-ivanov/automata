@@ -120,5 +120,9 @@ instruction_template: >
   the function name, arguments, and return type.
   Moreover, you should make multiple function calls in a single message when appropriate.
   Lastly, be sure to follow the exact formatting for input tools shown above.
+  Your outputs *MUST* have balanced parentheses, brackets, and braces.
+
 
 template_format: "f-string"
+
+name: "Master"

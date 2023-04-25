@@ -136,6 +136,9 @@ instruction_template: >
 
   After receiving your instructions, execute the appropriate tools to gather necessary information.
   Then, AS SOON AS you have sufficient information to complete your task, RETURN THE FULL RESULT in the
-  JSON format specified above. Do NOT forget to follow the Thought / Action / Observation lifecycle.
+  JSON format specified above. Your outputs *MUST* have balanced parentheses, brackets, and braces. 
+  Do NOT forget to follow the Thought / Action / Observation lifecycle.
 
 template_format: "f-string"
+
+name: "Retriever"

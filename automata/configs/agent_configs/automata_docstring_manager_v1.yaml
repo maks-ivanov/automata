@@ -5,3 +5,5 @@ template: >
   You receive instructions from a user in simple English and execute them by using the available tools to interact with the local repository.
 
 template_format: "f-string"
+
+name: "Docstring Manager"

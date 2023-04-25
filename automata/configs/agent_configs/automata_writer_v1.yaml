@@ -64,7 +64,9 @@ instruction_template: >
       "tool": "python-writer-update-module", 
       "input": "tools.utils,,class MyClass:..."
     }
-
+  Your outputs *MUST* have balanced parentheses, brackets, and braces.
   After receiving your instructions, respond with the appropriate action.
 
 template_format: "f-string"
+
+name: "Writer"

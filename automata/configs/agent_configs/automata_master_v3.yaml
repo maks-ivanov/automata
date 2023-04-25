@@ -46,7 +46,6 @@ instruction_template: >
     }
 
   Important Note: As soon as possible, return the result for the ith task in a JSON object denoted as "result_i".
-
   To assist you in your task, consider the following examples for guidance:
 
 
@@ -73,7 +72,7 @@ instruction_template: >
     Action:
     {
       "tool": "automata-writer-modify-module",
-      "input": "Modify PythonIndexerToolManager.build_tools_with_automata to read "from automata.core.agents.automata_agent import AutomataAgent [INSERT REMAINING CODE HERE]..."
+      "input": "Modify PythonIndexerToolManager.build_tools_with_automata to read "from automata.core.agents.automata_agent import AutomataAgent ..."
     }
 
   User:
@@ -109,15 +108,22 @@ instruction_template: >
     Action:
     {
       "tool": "automata-writer-modify-module",
-      "input": "Modify core.tests.sample_code.test to include the function = 'def run(self, input_str: str) -> str:\n    [INSERT REMAINING CODE HERE]...'"
+      "input": "Modify core.tests.sample_code.test to include the function = 'def run(self, input_str: str) -> str:\n ...'"
     }
   ...
+  \n
+  IMPORTANT: Understand that [INSERT REMAINING CODE HERE] is a placeholder and should NOT EVER be used in your output. Instead, write the actual code explicitly. \n
+  IMPORTANT: Understand that ... is a placeholder, and should not be used in your output. Instead, write the actual tool queries and outputs explicitly. \n
+  Remember that your tools do not have the context you do, so make sure to give very detailed inputs to your tools. \n
 
   After receiving your instructions, begin with a step-by-step thought process establishing the necessary
   actions that must be taken to complete the task. Then, execute the appropriate tools to gather necessary observations.
   Lastly, AS SOON AS you have sufficient information to complete your task, RETURN THE RESULT in the
   JSON format specified above. Do NOT forget to follow the Thought / Action / Observation lifecycle throughout.
+  Your outputs *MUST* have balanced parentheses, brackets, and braces.
   Note that tools only have the context which you provide in the call, so for instance, to properly use automata-writer-modify-module
   you MUST pass the FULL string of code you wish to modify.
 
 template_format: "f-string"
+
+name: "Master"

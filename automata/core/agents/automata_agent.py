@@ -60,6 +60,7 @@ class AutomataAgentConfig(BaseModel):
         max_iters (int): The maximum number of iterations to run.
         temperature (float): The temperature to use for the agent.
         session_id (Optional[str]): The session ID to use for the agent.
+        name (str): The name of the agent.
     """
 
     class Config:
@@ -76,8 +77,9 @@ class AutomataAgentConfig(BaseModel):
     stream: bool = False
     verbose: bool = True
     max_iters: int = 1_000_000
-    temperature: float = 0.0
+    temperature: float = 0
     session_id: Optional[str] = None
+    name: str = "Automata"
 
     @classmethod
     def load(cls, config_version: AutomataConfigVersion) -> "AutomataAgentConfig":
@@ -166,6 +168,7 @@ class AutomataAgent:
         self.max_iters = config.max_iters
         self.temperature = config.temperature
         self.session_id = config.session_id
+        self.name = config.name
 
     def __del__(self):
         """Close the connection to the agent."""
@@ -195,7 +198,10 @@ class AutomataAgent:
             stream=self.stream,
         )
         if self.stream:
-            print(colored("\n>>>", "green", attrs=["blink"]) + colored(" Agent:", "green"))
+            print(
+                colored("\n>>>", "green", attrs=["blink"])
+                + colored(f" {self.name} Agent:", "green")
+            )
             accumulated_output = ""
             separator = " "
             response_text = ""
@@ -403,7 +409,6 @@ class AutomataAgent:
         json_objects = []
         stack = []
         start_idx = -1
-
         for idx, char in enumerate(input_str):
             if char == "{":
                 stack.append(char)

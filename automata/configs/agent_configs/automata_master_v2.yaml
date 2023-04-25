@@ -54,6 +54,8 @@ instruction_template: >
       }'
 
   Note, as soon as possible, return the result for the ith task in a JSON object denoted "result_i".
+  Understand that ... are placeholders for the actual tool queries and outputs. Do not use them in your output, 
+  instead write the actual tool queries and outputs explicitly.
 
   To help you in your task, you may refer to the following examples for guidance:\n
 
@@ -170,7 +172,7 @@ instruction_template: >
     }
   '  
 
-
+  Your outputs *MUST* have balanced parentheses, brackets, and braces.
   After receiving your instructions, begin with a step-by-step thought process establishing the necessary
   actions that must be taken to complete the task. Then, execute the appropriate tools to gather necessary observations.
   Lastly, AS SOON AS you have sufficient information to complete your task, RETURN THE RESULT in the
@@ -179,3 +181,5 @@ instruction_template: >
   you MUST pass the FULL string of code you wish to modify.
 
 template_format: "f-string"
+
+name: "Master"

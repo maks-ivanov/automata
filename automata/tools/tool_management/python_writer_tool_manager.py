@@ -60,8 +60,9 @@ class PythonWriterToolManager(BaseToolManager):
             Tool(
                 name="python-writer-update-module",
                 func=lambda path_comma_code_str: self._writer_update_module(path_comma_code_str),
-                description=f"Modifies the python code of a function, class, method, or module after receiving"
-                f" an input module path, source code, and optional class name. If the specified object or dependencies do not exist,"
+                description=f"Modifies the python code of a function, class, method, or module."
+                f" The input should be path, COMPLETE AND UNABBREVIATED code, and optional class name."
+                f"If the specified object or dependencies do not exist,"
                 f" then they are created automatically. If the object already exists,"
                 f" then the existing code is modified."
                 f" For example -"
@@ -81,8 +82,9 @@ class PythonWriterToolManager(BaseToolManager):
             Tool(
                 name="automata-writer-modify-module",
                 func=lambda path_comma_code_str: self._automata_update_module(path_comma_code_str),
-                description=f"Modifies the python code of a function, class, method, or module after receiving"
-                f" an input module path, source code, and optional class name. The actual work is carried out by an autonomous agent called Automata.",
+                description=f"Modifies the python code of a function, class, method, or module."
+                f" The input should be path, COMPLETE AND UNABBREVIATED code, and optional class name."
+                f" The actual work is carried out by an autonomous agent called Automata.",
             ),
         ]
         return tools

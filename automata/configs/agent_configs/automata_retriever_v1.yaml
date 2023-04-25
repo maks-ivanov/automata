@@ -93,9 +93,12 @@ instruction_template: >
     }
   ...
   <Result> The output is ... </Result>
-
+  
+  Your outputs *MUST* have balanced parentheses, brackets, and braces.
   After receiving your instructions, execute the appropriate tools and return the final result. 
   Note, as soon as you receive the necessary information, you should complete the task by returning
   the result between <Result> and </Result> tags.f
 
 template_format: "f-string"
+
+name: "Retriever"
