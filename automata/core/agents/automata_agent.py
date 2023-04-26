@@ -215,9 +215,6 @@ class AutomataAgent:
             latest_responses = self.iter_task()
             if len(self.messages) - AutomataAgent.NUM_DEFAULT_MESSAGES >= self.max_iters * 2:
                 return "Result was not captured before iterations exceeded max limit."
-            print("IN RUN, self.messages[-1][content]=", self.messages[-1]["content"])
-            print("IN RUN, self.messages[-2][content]=", self.messages[-2]["content"])
-            print("IN RUN, latest_responses=", latest_responses)
 
         return self.messages[-1]["content"]
 
