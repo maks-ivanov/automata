@@ -150,9 +150,6 @@ class PythonIndexerToolManager(BaseToolManager):
                 .build()
             )
             result = agent.run()
-            print("-" * 100)
-            print("Automata result: ", result)
-            print("-" * 100)
             return result
         except Exception as e:
             return "Failed to retrieve the code with error - " + str(e)
