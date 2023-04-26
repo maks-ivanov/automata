@@ -295,7 +295,6 @@ class AutomataAgent:
     def _generate_observations(self, response_text: str) -> Dict[str, str]:
         """Process the messages in the conversation."""
         actions = AutomataAgent._extract_actions(response_text)
-        print("EXTRACTED ACTIONS:", actions)
         logger.debug("Actions: %s" % actions)
         outputs = {}
         (result_counter, tool_counter) = (0, 0)

@@ -134,9 +134,9 @@ class PythonIndexerToolManager(BaseToolManager):
 
         try:
             initial_payload = {"overview": self.indexer.get_overview()}
-            print("-" * 100)
-            print("_run_automata_indexer_retrieve_code Input Instructions: ", input_str)
-            print("-" * 100)
+            logger.debug("-" * 60)
+            logger.debug("_run_automata_indexer_retrieve_code Input Instructions: ", input_str)
+            logger.debug("-" * 60)
 
             agent = (
                 AutomataAgentBuilder(automata_config)
