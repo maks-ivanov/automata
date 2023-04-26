@@ -53,7 +53,7 @@ class PythonWriterToolManager(BaseToolManager):
         self.model = kwargs.get("model") or "gpt-4"
         self.verbose = kwargs.get("verbose") or False
         self.stream = kwargs.get("stream") or True
-        self.temperature = kwargs.get("temperature") or 0
+        self.temperature = kwargs.get("temperature") or 0.0
 
     def build_tools(self) -> List[Tool]:
         """Builds a list of Tool object for interacting with PythonWriter."""

@@ -51,7 +51,7 @@ class PythonIndexerToolManager(BaseToolManager):
             kwargs.get("automata_version") or AutomataConfigVersion.AUTOMATA_INDEXER_PROD
         )
         self.model = kwargs.get("model") or "gpt-4"
-        self.temperature = kwargs.get("temperature") or 0
+        self.temperature = kwargs.get("temperature") or 0.0
         self.verbose = kwargs.get("verbose") or False
         self.stream = kwargs.get("stream") or True
 

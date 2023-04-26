@@ -19,7 +19,7 @@ class ToolManagerFactory:
     def create_tool_manager(toolkit_type: ToolkitType, inputs: dict) -> Optional[BaseToolManager]:
         model = inputs.get("model") or "gpt-4"
         documentation_url = inputs.get("documentation_url")
-        temperature = inputs.get("temperature") or 0.7
+        temperature = inputs.get("temperature") or 0.0
 
         if toolkit_type == ToolkitType.PYTHON_INDEXER:
             python_indexer = PythonIndexer(root_py_path())

@@ -142,7 +142,8 @@ class AutomataAgent:
 
     def __del__(self):
         """Close the connection to the agent."""
-        self.conn.close()
+        if hasattr(self, "conn"):
+            self.conn.close()
 
     def iter_task(self) -> Optional[Tuple[Dict[str, str], Dict[str, str]]]:
         """Run the test and report the tool outputs back to the master."""
