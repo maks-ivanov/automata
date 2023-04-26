@@ -168,3 +168,5 @@ instruction_template: >
   you MUST pass the FULL string of code you wish to modify.
 
 template_format: "f-string"
+
+name: "Master"

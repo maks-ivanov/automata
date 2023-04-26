@@ -195,3 +195,5 @@ instruction_template: >
       ```
 
 template_format: "f-string"
+
+name: "Code Indexer"

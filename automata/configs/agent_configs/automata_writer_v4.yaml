@@ -219,3 +219,5 @@ instruction_template: >
   When returning code, follow the specified format exactly, e.g. write "python\n```\ndef f(x: int):\n...```"
 
 template_format: "f-string"
+
+name: "Code Writer"
