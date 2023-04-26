@@ -6,9 +6,9 @@ from typing import Dict
 
 from termcolor import colored
 
-from automata.configs.agent_configs import AutomataConfigVersion
-from automata.core import Toolkit, ToolkitType, load_llm_toolkits
+from automata.configs.agent_configs.config_type import AutomataConfigVersion
 from automata.core.agents.automata_agent import AutomataAgentBuilder, AutomataAgentConfig
+from automata.core.base.tool import Toolkit, ToolkitType
 from automata.core.utils import (
     checkout_branch,
     create_branch,
@@ -20,6 +20,7 @@ from automata.core.utils import (
     submit,
     validate_work_branch,
 )
+from automata.tool_management.tool_management_utils import build_llm_toolkits
 from automata.tools.python_tools.python_indexer import PythonIndexer
 
 
@@ -27,9 +28,9 @@ def main():
     parser = argparse.ArgumentParser(description="Run the AutomataAgent.")
     parser.add_argument("--instructions", type=str, help="The initial instructions for the agent.")
     parser.add_argument(
-        "--config-version",
-        type=AutomataConfigVersion,
-        default=AutomataConfigVersion.AUTOMATA_MASTER_V3,
+        "--config_version",
+        type=str,
+        default=AutomataConfigVersion.AUTOMATA_MASTER_PROD.value,
         help="The config version of the agent.",
     )
     parser.add_argument(
@@ -65,6 +66,18 @@ def main():
         default=None,
         help="The branch to be used for the agent's work.",
     )
+    parser.add_argument(
+        "--automata_indexer_config_version",
+        type=str,
+        default=AutomataConfigVersion.AUTOMATA_INDEXER_PROD.value,
+        help="Should the instruction prompt include an overview?",
+    )
+    parser.add_argument(
+        "--automata_writer_config_version",
+        type=str,
+        default=AutomataConfigVersion.AUTOMATA_WRITER_PROD.value,
+        help="Should the instruction prompt include an overview?",
+    )
 
     parser.add_argument("-v", "--verbose", action="store_true", help="increase output verbosity")
 
@@ -87,8 +100,18 @@ def main():
     assert not (
         args.instructions and args.session_id
     ), "You must provide either instructions for the agent or a session_id."
-    inputs = {"documentation_url": args.documentation_url, "model": args.model}
-    llm_toolkits: Dict[ToolkitType, Toolkit] = load_llm_toolkits(
+
+    inputs = {
+        "documentation_url": args.documentation_url,
+        "model": args.model,
+        "automata_indexer_config": AutomataAgentConfig.load(
+            AutomataConfigVersion(args.automata_indexer_config_version)
+        ),
+        "automata_writer_config": AutomataAgentConfig.load(
+            AutomataConfigVersion(args.automata_writer_config_version)
+        ),
+    }
+    llm_toolkits: Dict[ToolkitType, Toolkit] = build_llm_toolkits(
         args.toolkits.split(","), **inputs
     )
 
@@ -101,7 +124,6 @@ def main():
 
     if args.include_overview:
         indexer = PythonIndexer(root_py_path())
-
         initial_payload = {
             "overview": indexer.get_overview(),
         }
@@ -121,7 +143,7 @@ def main():
     )
     logger.info("-" * 60)
 
-    agent_config_version = AutomataConfigVersion(args.config_version)
+    agent_config_version = AutomataConfigVersion(AutomataConfigVersion(args.config_version))
     agent_config = AutomataAgentConfig.load(agent_config_version)
 
     agent = (

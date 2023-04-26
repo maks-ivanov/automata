@@ -5,8 +5,8 @@ import pytest
 
 from automata.core.base.tool import Tool
 from automata.core.utils import root_py_path
+from automata.tool_management.python_indexer_tool_manager import PythonIndexerToolManager
 from automata.tools.python_tools.python_indexer import PythonIndexer
-from automata.tools.tool_management.python_indexer_tool_manager import PythonIndexerToolManager
 
 
 @pytest.fixture
@@ -34,5 +34,5 @@ def test_tool_execution(python_indexer_tool_builder):
     )
 
     tools = python_indexer_tool_builder.build_tools()
-    assert tools[0].func("module.path,func") == "Sample code"
-    assert tools[1].func("module.path,func") == "Sample docstring"
+    assert tools[0].func(("module.path", "func")) == "Sample code"
+    assert tools[1].func(("module.path", "func")) == "Sample docstring"
