@@ -71,12 +71,13 @@ class PythonIndexerToolManager(BaseToolManager):
                 f"Then the correct tool input for the parser follows:\n"
                 f"  - tool_args\n"
                 f"    - my_file\n"
-                f"    - my_function\n\n"
+                f"    - my_object\n\n"
                 f"Suppose instead the file is located in a subdirectory called my_directory,"
                 f" then the correct tool input for the parser is:\n"
                 f"  - tool_args\n    - my_directory.my_file\n    - my_function\n\n"
                 f"Lastly, if the function is defined in a class, MyClass, then the correct tool input is:\n"
-                f"  - tool_args\n    - my_directory.my_file\n    - MyClass.my_function",
+                f"  - tool_args\n    - my_directory.my_file\n    - MyClass.my_function."
+                f"ALWAYS follow this format when calling the tool",
                 return_direct=True,
                 verbose=True,
             ),
@@ -109,8 +110,15 @@ class PythonIndexerToolManager(BaseToolManager):
             Tool(
                 name="automata-indexer-retrieve-code",
                 func=lambda path_str: self._run_automata_indexer_retrieve_code(path_str, config),
-                description="Automata parses a natural language query to retrieve the correct code, docstrings, and import statements necessary to solve an abstract task."
-                "Do not shorten the output of this tool, as it is used as input to other tools.",
+                description=(
+                    f"Automata parses a natural language query to retrieve the correct code, docstrings, and import statements necessary to solve an abstract task."
+                    f"Input should be follow this format:"
+                    f"  - tool_args\n"
+                    f"    - my_file\n"
+                    f"    - my_object_path\n\n"
+                    f"    - my_function\n\n"
+                    f"Do not shorten the output of this tool, as it is used as input to other tools."
+                ),
             ),
         ]
         return tools

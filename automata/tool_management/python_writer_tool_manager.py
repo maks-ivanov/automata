@@ -93,7 +93,7 @@ class PythonWriterToolManager(BaseToolManager):
                 name="automata-writer-modify-module",
                 func=lambda input_str: self._automata_update_module(input_str, config),
                 description=f"Modifies the python code of a function, class, method, or module."
-                f" The input should be path, COMPLETE AND UNABBREVIATED code, and optional class name.",
+                f" The input should be path, COMPLETE AND UNABBREVIATED updated code, and optional class name.",
             ),
         ]
         return tools

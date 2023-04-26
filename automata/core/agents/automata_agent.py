@@ -123,7 +123,7 @@ class AutomataAgent:
         response_summary = openai.ChatCompletion.create(
             model=self.model,
             messages=self.messages,
-            temperature=self.temperature,
+            temperature=0.01,
             stream=self.stream,
         )
         if self.stream:

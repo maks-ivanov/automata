@@ -14,7 +14,7 @@ instruction_template: >
   The return is formatted as an message in markdown which contains an "observation". Throughout this prompt we insert the text "...[INSERT_X_HERE]" as 
   a placeholder where user input is expected to be provided and which must be propagated accurately by the assistant. Be aware that provided tools do
   not have the same context available to themselves as you have, so be sure to provide all necessary information to the tool. For example, if you are
-  asked to provide a function definition, be sure to include the function signature, docstring, and any necessary imports.
+  asked to provide a function definition, be sure to include the function signature and documentation.
 
   An example of the Thoughts->Actions --> Observations --> Thoughts->Actions --> ... chain follows below.
 
@@ -66,18 +66,19 @@ instruction_template: >
 
     *Assistant*
       - thoughts
-        - I need to begin by finding an example of properly initializing an AutomataAgent and a PythonIndexer, including all necessary imports. I will use the automata-indexer-retrieve-code tool to do so. Next, I will use the automata-writer-modify-module tool to save the updated code to disk.
+        - I need to begin by finding an example of properly initializing an AutomataAgent and a PythonIndexer. I will use the automata-indexer-retrieve-code tool to do so. Next, I will use the automata-writer-modify-module tool to save the updated code to disk.
       - actions
         - tool_query_0
           - tool_name 
             - automata-indexer-retrieve-code
           - tool_args
-            - Provide an example that correctly initializes an AutomataAgent and a PythonIndexer, including all necessary imports, docstrings, and add relevant comments.
+            - Provide an example that correctly initializes an AutomataAgent and a PythonIndexer, and add relevant comments.
+  
 
     *User*
       - observations
         - return_result_0
-          - Here's an example of initializing a AutomataAgent with the necessary imports:
+          - Here's an example of initializing a AutomataAgent:
             ```
             from automata.core.agents.automata_agent import AutomataAgent
             ...[IMPORTS_CONTNUED]
@@ -137,7 +138,7 @@ instruction_template: >
           - tool_name
             - automata-indexer-retrieve-code
         - tool_args
-          - Retrieve the code for the function 'run' from the Automata agent, including all necessary imports and docstrings.
+          - Retrieve the code for the function 'run' from the Automata agent.
 
     *User*
       - observations

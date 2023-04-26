@@ -5,5 +5,5 @@ model: "gpt-4"
 stream: false
 verbose: true
 max_iters: 100
-temperature: 0.8
+temperature: 0.0
 session_id: "test-session-id"

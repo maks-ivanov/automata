@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 class DocumentationGPT:
-    def __init__(self, url, model="gpt-3.5-turbo", temperature=0.7, verbose=False):
+    def __init__(self, url, model="gpt-3.5-turbo", temperature=0.0, verbose=False):
         load_dotenv()
         self.url = url
         self.model = model

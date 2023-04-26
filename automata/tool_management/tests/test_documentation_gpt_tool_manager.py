@@ -10,7 +10,7 @@ def doc_gpt_tool_builder():
     documentation_gpt = DocumentationGPT(
         url="https://python.langchain.com/en/latest/index.html",
         model="gpt-4",
-        temperature=0.7,
+        temperature=0.0,
         verbose=True,
     )
     return DocumentationGPTToolManager(documentation_gpt=documentation_gpt)
@@ -20,7 +20,7 @@ def test_init():
     documentation_gpt = DocumentationGPT(
         url="https://python.langchain.com/en/latest/index.html",
         model="gpt-4",
-        temperature=0.7,
+        temperature=0.0,
         verbose=True,
     )
     documentation_gpt_tool_manager = DocumentationGPTToolManager(

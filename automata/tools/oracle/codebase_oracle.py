@@ -55,7 +55,7 @@ class CodebaseOracle:
 
     @staticmethod
     def get_default_codebase_oracle() -> "CodebaseOracle":
-        llm = ChatOpenAI(streaming=True, temperature=0.7, model_name="gpt-4")  # type: ignore
+        llm = ChatOpenAI(streaming=True, temperature=0.0, model_name="gpt-4")  # type: ignore
         memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
         read_only_memory = ReadOnlySharedMemory(memory=memory)
         return CodebaseOracle(root_path(), llm, read_only_memory)  # type: ignore

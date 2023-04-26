@@ -7,7 +7,7 @@ from automata.configs.agent_configs.config_type import AutomataConfigVersion
 from .conftest import build_agent_with_params, cleanup_and_check
 
 MODEL = "gpt-4"
-TEMPERATURE = 0.7
+TEMPERATURE = 0.0
 
 # Stop the exmaples early to avoid random error
 # Will be fixed once we set sub-models to T=0

@@ -10,7 +10,7 @@ from .conftest import build_agent_with_params
 current_file_dir = os.path.dirname(os.path.realpath(__file__))
 
 MODEL = "gpt-4"
-TEMPERATURE = 0.7
+TEMPERATURE = 0.0
 EXPECTED_RESPONSES = {
     "test_retrieve_load_yaml_docs": "Loads a YAML file.",
     "test_retrieve_python_writer_docs": textwrap.dedent(

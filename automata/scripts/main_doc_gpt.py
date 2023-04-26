@@ -19,7 +19,7 @@ parser.add_argument(
     choices=["gpt-3.5-turbo", "gpt-4"],
 )
 parser.add_argument(
-    "--temperature", "-t", type=float, help="temperature of the model", default=0.7
+    "--temperature", "-t", type=float, help="temperature of the model", default=0.0
 )
 parser.add_argument("--verbose", "-v", action="store_true", help="increase output verbosity")
 

@@ -39,7 +39,7 @@ def test_builder_provided_parameters_override_defaults(automata_agent_builder):
         .with_stream(True)
         .with_verbose(True)
         .with_max_iters(500)
-        .with_temperature(0.5)
+        .with_temperature(0.0)
         .with_session_id("test-session-id")
         .build()
     )
@@ -48,7 +48,7 @@ def test_builder_provided_parameters_override_defaults(automata_agent_builder):
     assert agent.stream is True
     assert agent.verbose is True
     assert agent.max_iters == 500
-    assert agent.temperature == 0.5
+    assert agent.temperature == 0.0
     assert agent.session_id == "test-session-id"
 
 
@@ -64,7 +64,7 @@ def test_builder_accepts_all_fields(automata_agent_builder):
         .with_stream(True)
         .with_verbose(True)
         .with_max_iters(500)
-        .with_temperature(0.5)
+        .with_temperature(0.0)
         .with_session_id("test-session-id")
         .build()
     )
@@ -75,7 +75,7 @@ def test_builder_accepts_all_fields(automata_agent_builder):
     assert agent.stream is True
     assert agent.verbose is True
     assert agent.max_iters == 500
-    assert agent.temperature == 0.5
+    assert agent.temperature == 0.0
     assert agent.session_id == "test-session-id"
 
 
@@ -99,7 +99,7 @@ def test_builder_invalid_input_types(automata_agent_builder):
         automata_agent_builder.with_max_iters("500")
 
     with pytest.raises(ValueError):
-        automata_agent_builder.with_temperature("0.5")
+        automata_agent_builder.with_temperature("0.0")
 
     with pytest.raises(ValueError):
         automata_agent_builder.with_session_id(12345)
@@ -121,5 +121,5 @@ def test_builder_gets_default_params_from_test_config():
     assert agent.stream is False
     assert agent.verbose is True
     assert agent.max_iters == 100
-    assert agent.temperature == 0.8
+    assert agent.temperature == 0.0
     assert agent.session_id == "test-session-id"
