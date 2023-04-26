@@ -108,14 +108,16 @@ def run_retrieval_chain_with_sources_format(
 
 
 def calculate_similarity(content_a: str, content_b: str) -> float:
-    """Checks the similarity between two pieces of text using OpenAI Embeddings."""
     resp = openai.Embedding.create(
         input=[content_a, content_b], engine="text-similarity-davinci-001"
     )
     embedding_a = resp["data"][0]["embedding"]
     embedding_b = resp["data"][1]["embedding"]
     similarity = np.dot(embedding_a, embedding_b).item()
-    return similarity
+    norm_a = np.linalg.norm(embedding_a)
+    norm_b = np.linalg.norm(embedding_b)
+    normalized_similarity = similarity / (norm_a * norm_b)
+    return normalized_similarity
 
 
 class NumberedLinesTextLoader(TextLoader):
