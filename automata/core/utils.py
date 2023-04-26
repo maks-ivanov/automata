@@ -114,10 +114,7 @@ def calculate_similarity(content_a: str, content_b: str) -> float:
     embedding_a = resp["data"][0]["embedding"]
     embedding_b = resp["data"][1]["embedding"]
     similarity = np.dot(embedding_a, embedding_b).item()
-    magnitude_a = np.linalg.norm(embedding_a)
-    magnitude_b = np.linalg.norm(embedding_b)
-    normalized_similarity = similarity / (magnitude_a * magnitude_b)
-    return normalized_similarity
+    return similarity
 
 
 class NumberedLinesTextLoader(TextLoader):
