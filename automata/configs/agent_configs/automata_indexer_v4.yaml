@@ -52,7 +52,8 @@ instruction_template: >
           - The output is ...
 
 
-  Note, as soon as possible, return the result for the ith task in an XML object with tag "return_result_i".
+  Note, as soon as possible, return the result for the ith task in an XML object with tag "return_result_i". 
+  Important Note: '...' is a placeholder, do not return output containing '...'. Instead, write out the output in full.
 
   An overview of the available python modules, and their internal functions and classes follows below.
 

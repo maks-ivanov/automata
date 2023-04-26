@@ -50,7 +50,7 @@ instruction_template: >
 
 
   Important Note: As soon as possible, return the result for the ith task in a message with markdown containing the tag "return_result_i".
-
+  Important Note: '...' is a placeholder, do not return output containing '...'. Instead, write out the output in full.
 
   An overview of the available python modules, and their internal functions and classes follows below.
 
