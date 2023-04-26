@@ -231,3 +231,4 @@ instruction_template: >
   "I am unable to complete the given task. Please provide the necessary code to complete the task.".
 
 template_format: "f-string"
+name: "Code Writer"
