@@ -180,7 +180,15 @@ class AutomataAgent:
                 if separator in accumulated_output:
                     words = accumulated_output.split(separator)
                     for word in words[:-1]:
-                        print(colored(word, "green"), end=" ", flush=True)
+                        attrs = (
+                            ["bold"]
+                            if any(
+                                keyword in word
+                                for keyword in ["thoughts", "actions", "observations"]
+                            )
+                            else []
+                        )
+                        print(colored(word, "green", attrs=attrs), end=" ", flush=True)
                     accumulated_output = words[-1]
             print(colored(str(accumulated_output), "green"))
         else:

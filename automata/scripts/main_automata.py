@@ -139,9 +139,9 @@ def main():
         checkout_branch(work_branch)
 
     logger.info(
-        f"Passing in instructions:\n{colored(instructions, color='white', on_color='on_green')}"
+        f"Passing in instructions:\n{colored(instructions, color='green', attrs=['reverse'])}"
     )
-    logger.info("-" * 60)
+    # logger.info("-" * 60)
 
     agent_config_version = AutomataConfigVersion(AutomataConfigVersion(args.config_version))
     agent_config = AutomataAgentConfig.load(agent_config_version)
