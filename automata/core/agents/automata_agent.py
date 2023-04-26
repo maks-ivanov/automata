@@ -159,7 +159,7 @@ class AutomataAgent:
         )
         logger.debug("Chat Context length: %s", context_length)
         logger.debug("-" * 60)
-        logger.info("Running instruction...")
+        # logger.info("Running instruction...")
         response_summary = openai.ChatCompletion.create(
             model=self.model,
             messages=self.messages,

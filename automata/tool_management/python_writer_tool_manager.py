@@ -115,10 +115,6 @@ class PythonWriterToolManager(BaseToolManager):
         """Creates an AutomataAgent to write the given task."""
         from automata.tool_management.tool_management_utils import build_llm_toolkits
 
-        print("-" * 100)
-        print("_automata_update_module Input Instructions: ", input_str)
-        print("-" * 100)
-
         try:
             initial_payload = {
                 "overview": self.writer.indexer.get_overview(),
