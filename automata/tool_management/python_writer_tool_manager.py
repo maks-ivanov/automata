@@ -17,7 +17,8 @@ import logging
 from typing import Any, List, Optional
 
 from automata.configs.agent_configs.config_type import AutomataConfigVersion
-from automata.core.agents.automata_agent import AutomataAgentBuilder, AutomataAgentConfig
+from automata.core.agents.automata_agent import AutomataAgentConfig
+from automata.core.agents.automata_agent_builder import AutomataAgentBuilder
 from automata.core.base.tool import Tool
 from automata.tools.python_tools.python_writer import PythonWriter
 
@@ -70,16 +71,16 @@ class PythonWriterToolManager(BaseToolManager):
                 f" then the existing code is modified."
                 f" For example -"
                 f' to implement a method "my_method" of "MyClass" in the module "my_file.py" which exists in "my_folder",'
-                f" the correct function call is"
-                f" <tool_query>"
-                f"   <tool>"
-                f"     python-writer-update-module"
-                f"   </tool>"
-                f"   <input>"
-                f'     my_folder.my_file,MyClass,def my_method() -> None:\n   """My Method"""\n    print("hello world")'
-                f"   </input>"
-                f" </tool_query>"
-                f" If new import statements are necessary, then introduce them at the top of the submitted input code.",
+                f" the correct function call follows:\n"
+                f" - tool_query_1\n"
+                f"   - tool_name\n"
+                f"     - python-writer-update-module\n"
+                f"   - tool_args\n"
+                f"     - my_folder.my_file\n"
+                f"     - MyClass\n"
+                f'     - def my_method() -> None:\n   """My Method"""\n    print("hello world")\n'
+                f"If new import statements are necessary, then introduce them at the top of the submitted input code.\n"
+                f"Provide the full code as input, as this tool has no context outside of passed arguments.\n",
                 return_direct=True,
             ),
         ]

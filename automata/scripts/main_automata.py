@@ -7,7 +7,7 @@ from typing import Dict
 from termcolor import colored
 
 from automata.configs.agent_configs.config_type import AutomataConfigVersion
-from automata.core.agents.automata_agent import AutomataAgentBuilder, AutomataAgentConfig
+from automata.core.agents.automata_agent_builder import AutomataAgentBuilder, AutomataAgentConfig
 from automata.core.base.tool import Toolkit, ToolkitType
 from automata.core.utils import (
     checkout_branch,
