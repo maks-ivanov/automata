@@ -54,7 +54,7 @@ def test_builder_default_config():
     assert agent.stream is False
     assert agent.verbose is False
     assert agent.max_iters == 1_000_000
-    assert agent.temperature == 0.7
+    assert agent.temperature == 0.0
     assert agent.session_id is not None  # session id defaults if not set
 
 

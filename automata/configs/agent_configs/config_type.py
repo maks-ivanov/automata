@@ -68,7 +68,7 @@ class AutomataAgentConfig(BaseModel):
     stream: bool = False
     verbose: bool = False
     max_iters: int = 1_000_000
-    temperature: float = 0.7
+    temperature: float = 0.0
     session_id: Optional[str] = None
     name: Optional[str] = "Automata"
 
