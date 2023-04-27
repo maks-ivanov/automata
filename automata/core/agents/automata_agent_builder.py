@@ -1,13 +1,18 @@
 from typing import Dict, Optional
 
+from pydantic import BaseModel, PrivateAttr
+
 from automata.configs.config_types import AutomataAgentConfig
 from automata.core.base.tool import Toolkit, ToolkitType
 
 from .automata_agent import AutomataAgent
 
 
-class AutomataAgentBuilder:
-    def __init__(self, config: AutomataAgentConfig):
+class AutomataAgentBuilder(BaseModel):
+    _instance: AutomataAgent = PrivateAttr()
+
+    def __init__(self, config: Optional[AutomataAgentConfig]):
+        super().__init__()
         self._instance = AutomataAgent(config)
 
     def with_initial_payload(self, initial_payload: Dict[str, str]):

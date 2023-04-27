@@ -27,13 +27,13 @@
                But before adding this cpability, we need to continue
                polishing the framework
 
-        TODO - Think about how to introduce the starting instructions to configs
+        TODO - Add field for instruction config version to agent + builder
 """
 import logging
 import re
 import sqlite3
 import uuid
-from typing import Dict, Final, List, Optional, Tuple, cast
+from typing import TYPE_CHECKING, Dict, Final, List, Optional, Tuple, cast
 
 import openai
 from termcolor import colored
@@ -45,6 +45,7 @@ from automata.configs.config_types import (
     ConfigCategory,
     InstructionConfigVersion,
 )
+from automata.core.agents.agent import Agent
 from automata.core.agents.automata_agent_helpers import (
     ActionExtractor,
     generate_user_observation_message,
@@ -54,8 +55,13 @@ from automata.core.utils import format_config, load_yaml_config
 
 logger = logging.getLogger(__name__)
 
+if TYPE_CHECKING:
+    from automata.core.coordinator.agent_coordinator import (  # This import will only happen during type checking
+        AgentCoordinator,
+    )
 
-class AutomataAgent:
+
+class AutomataAgent(Agent):
     """
     AutomataAgent is an autonomous agent that performs the actual work of the Automata
     system. Automata are responsible for executing instructions and reporting
@@ -92,10 +98,12 @@ class AutomataAgent:
         self.temperature = config.temperature
         self.session_id = config.session_id
         self.completed = False
+        self.conn: Optional[sqlite3.Connection] = None
 
     def __del__(self):
         """Close the connection to the agent."""
-        self.conn.close()
+        if self.conn:
+            self.conn.close()
 
     def run(self) -> str:
         latest_responses = self.iter_task()
@@ -289,6 +297,8 @@ class AutomataAgent:
         self.conn.commit()
 
     def _save_interaction(self, interaction: Dict[str, str]):
+        assert self.session_id is not None, "Session ID is not set."
+        assert self.conn is not None, "Database connection is not set."
         """Save the interaction to the database."""
         interaction_id = len(self.messages)
         role = interaction["role"]
@@ -312,7 +322,7 @@ class AutomataAgent:
 
     def _build_tool_message(self):
         """Builds a message containing all tools and their descriptions."""
-        return "".join(
+        return "Tools:\n" + "".join(
             [
                 f"\n{tool.name}: {tool.description}\n"
                 for toolkit in self.llm_toolkits.values()
@@ -351,3 +361,43 @@ class AutomataAgent:
             input_messages.append({"role": message["role"], "content": input_message})
 
         return input_messages
+
+
+class MasterAutomataAgent(AutomataAgent):
+    def __init__(self, agent_config, *args, **kwargs):
+        super().__init__(agent_config, *args, **kwargs)
+        self.coordinator = None
+
+    def set_coordinator(self, coordinator: "AgentCoordinator"):
+        self.coordinator = coordinator
+
+    def run(self, *args, **kwargs):
+        # Example:
+        result = super().run(*args, **kwargs)
+        # ... (process the result using the coordinator) ...
+        return result
+
+    @classmethod
+    def from_agent(cls, agent: AutomataAgent) -> "MasterAutomataAgent":
+        master_agent = cls(None)
+        master_agent.llm_toolkits = agent.llm_toolkits
+        master_agent.instructions = agent.instructions
+        master_agent.model = agent.model
+        master_agent.initial_payload = agent.initial_payload
+        master_agent.llm_toolkits = agent.llm_toolkits
+        master_agent.instructions = agent.instructions
+        master_agent.config_version = agent.config_version
+        master_agent.system_instruction_template = agent.system_instruction_template
+        master_agent.instruction_input_variables = agent.instruction_input_variables
+        master_agent.model = agent.model
+        master_agent.stream = agent.stream
+        master_agent.verbose = agent.verbose
+        master_agent.max_iters = agent.max_iters
+        master_agent.temperature = agent.temperature
+        master_agent.session_id = agent.session_id
+        master_agent.completed = False
+        return master_agent
+
+    def _setup(self, *args, **kwargs):
+        super()._setup(*args, **kwargs)
+        # Add your custom setup logic for the MasterAutomataAgent here

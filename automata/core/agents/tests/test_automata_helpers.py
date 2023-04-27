@@ -213,7 +213,7 @@ def test_extract_actions_6(automata_agent):
     assert user_observation_message.strip() == expected_observations.strip()
 
 
-def test_extract_actions_7(automata_agent):
+def test_extract_actions_7():
     text = textwrap.dedent(
         """
         - thoughts
