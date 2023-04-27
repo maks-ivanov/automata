@@ -48,6 +48,8 @@ from automata.configs.config_types import (
 from automata.core.agents.agent import Agent
 from automata.core.agents.automata_agent_helpers import (
     ActionExtractor,
+    ResultAction,
+    ToolAction,
     generate_user_observation_message,
     retrieve_completion_message,
 )
@@ -240,34 +242,31 @@ class AutomataAgent(Agent):
         actions = ActionExtractor.extract_actions(response_text)
         logger.debug("Actions: %s" % actions)
         outputs = {}
-        (result_counter, tool_counter) = (0, 0)
-        for action_request in actions:
-            (tool_query, tool_name, tool_input) = (
-                action_request[ActionExtractor.TOOL_QUERY_FIELD],
-                action_request[ActionExtractor.TOOL_NAME_FIELD],
-                action_request[ActionExtractor.TOOL_ARGS_FIELD],
-            )
-            # Skip the initializer dummy tool which exists only for providing context
-            if tool_name == AutomataAgent.INITIALIZER_DUMMY_TOOL:
-                continue
-            # Skip the return result indicator which exists only for marking the return result
-            if ActionExtractor.RETURN_RESULT_INDICATOR in tool_name:
-                outputs[
-                    "%s_%i" % (ActionExtractor.RETURN_RESULT_INDICATOR, result_counter)
-                ] = "\n".join(tool_input)
-                result_counter += 1
-                continue
-            if tool_name == AutomataAgent.ERROR_DUMMY_TOOL:
-                # Input becomes the output when an error is registered
-                outputs[tool_query.replace("query", "output")] = cast(str, tool_input)
-                tool_counter += 1
-            else:
-                tool_output = self._execute_tool(tool_name, tool_input)
-                outputs[tool_query.replace("query", "output")] = tool_output
-                tool_counter += 1
+        for action in actions:
+            if isinstance(action, ToolAction):
+                (tool_query, tool_name, tool_input) = (
+                    action.tool_query,
+                    action.tool_name,
+                    action.tool_args,
+                )
+                # Skip the initializer dummy tool which exists only for providing context
+                if tool_name == AutomataAgent.INITIALIZER_DUMMY_TOOL:
+                    continue
+                if tool_name == AutomataAgent.ERROR_DUMMY_TOOL:
+                    # Input becomes the output when an error is registered
+                    outputs[tool_query.replace("query", "output")] = cast(str, tool_input)
+                else:
+                    tool_output = self._execute_tool(tool_name, tool_input)
+                    outputs[tool_query.replace("query", "output")] = tool_output
+            elif isinstance(action, ResultAction):
+                (result_name, result_outputs) = (action.result_name, action.result_outputs)
+                # Skip the return result indicator which exists only for marking the return result
+                outputs[result_name] = "\n".join(result_outputs)
+
         return outputs
 
     def _execute_tool(self, tool_name: str, tool_input: List[str]) -> str:
+        """Execute the tool with the given name and input."""
         tool_found = False
         tool_output = None
 
@@ -364,21 +363,31 @@ class AutomataAgent(Agent):
 
 
 class MasterAutomataAgent(AutomataAgent):
+    """A master automata agent that works with the coordinater to manipulate other automata agents."""
+
     def __init__(self, agent_config, *args, **kwargs):
+        """Initialize the master automata agent."""
         super().__init__(agent_config, *args, **kwargs)
         self.coordinator = None
 
     def set_coordinator(self, coordinator: "AgentCoordinator"):
+        """Set the coordinator."""
         self.coordinator = coordinator
 
     def run(self, *args, **kwargs):
+        """Run the master automata agent."""
         # Example:
         result = super().run(*args, **kwargs)
         # ... (process the result using the coordinator) ...
         return result
 
+    # TODO - I do not feel great abou this method
+    # should we remove it? Should we add config to the AutomataAgent
+    # so that this method can be simplified?
+
     @classmethod
     def from_agent(cls, agent: AutomataAgent) -> "MasterAutomataAgent":
+        """Create a master automata agent from an automata agent."""
         master_agent = cls(None)
         master_agent.llm_toolkits = agent.llm_toolkits
         master_agent.instructions = agent.instructions
