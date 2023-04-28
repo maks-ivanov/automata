@@ -27,8 +27,8 @@ class AgentInstance(BaseModel):
 
 
 class AgentCoordinator:
-    def __init__(self, master_agent_instance: MasterAutomataAgent):
-        self.master_agent_instance: MasterAutomataAgent = master_agent_instance
+    def __init__(self, master_agent: MasterAutomataAgent):
+        self.master_agent: MasterAutomataAgent = master_agent
         self.agent_instances: List[AgentInstance] = []
 
     def add_agent_instance(self, agent_instance):

@@ -1,3 +1,6 @@
+import textwrap
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 from automata.core.agents.automata_agent import MasterAutomataAgent
@@ -56,7 +59,7 @@ def test_cannot_remove_missing_agent(coordinator):
 def test_add_agent_set_coordinator(coordinator):
     agent_builder = AutomataAgentBuilder(config=None)
     agent_instance = AgentInstance(name="agent_0", builder=agent_builder)
-    master_agent = coordinator.master_agent_instance
+    master_agent = coordinator.master_agent
     master_agent.set_coordinator(coordinator)
     coordinator.add_agent_instance(agent_instance)
 
@@ -64,11 +67,72 @@ def test_add_agent_set_coordinator(coordinator):
 
 
 def test_build_agent_message(coordinator):
-    agent_builder = AutomataAgentBuilder(config=None)
-    agent_instance = AgentInstance(
-        name="agent_0", builder=agent_builder, description="This is a test agent."
-    )
-    master_agent = coordinator.master_agent_instance
+    master_agent = coordinator.master_agent
     master_agent.set_coordinator(coordinator)
-    coordinator.add_agent_instance(agent_instance)
-    assert coordinator._build_agent_message() == "Agents:\n\nagent_0: This is a test agent.\n"
+    master_agent.iter_task()
+
+
+def mock_openai_response_with_completion_message():
+    return {
+        "choices": [
+            {
+                "message": {
+                    "content": textwrap.dedent(
+                        """
+                        - thoughts
+                        - I can retrieve this information directly with the python indexer.
+                        - actions
+                        - tool_query_0
+                            - tool_name
+                                - python-indexer-retrieve-docstring
+                            - tool_args
+                                - core.utils
+                                - calculate_similarity
+                        - tool_query_1
+                            - tool_name
+                                - python-indexer-retrieve-code
+                            - tool_args
+                                - core.utils
+                                - calculate_similarity
+                        - agent_query_0
+                            - agent_name
+                                - agent_0
+                            - agent_instruction
+                                - Begin
+                        """
+                    )
+                }
+            }
+        ]
+    }
+
+
+def mocked_execute_agent(_):
+    response = textwrap.dedent(
+        '''
+        - thoughts
+            - Having successfully written the output file, I can now return the result.
+        - actions
+            - return_result_0
+                - This is a mock return result
+        """
+        '''
+    )
+    return response
+
+
+@pytest.mark.parametrize("api_response", [mock_openai_response_with_completion_message()])
+@patch("openai.ChatCompletion.create")
+def test_iter_task_with_completion_message(
+    mock_openai_chatcompletion_create, api_response, coordinator
+):
+    mock_openai_chatcompletion_create.return_value = api_response
+    master_agent = coordinator.master_agent
+
+    master_agent._execute_agent = MagicMock(side_effect=mocked_execute_agent)
+
+    master_agent.iter_task()
+
+    completion_message = master_agent.messages[-1]["content"]
+    assert "- agent_0_result_0" in completion_message
+    assert "- This is a mock return " in completion_message

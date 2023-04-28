@@ -48,6 +48,7 @@ from automata.configs.config_types import (
 from automata.core.agents.agent import Agent
 from automata.core.agents.automata_agent_helpers import (
     ActionExtractor,
+    AgentAction,
     ResultAction,
     ToolAction,
     generate_user_observation_message,
@@ -100,6 +101,7 @@ class AutomataAgent(Agent):
         self.temperature = config.temperature
         self.session_id = config.session_id
         self.completed = False
+        self.latest_observations: Dict[str, str] = {}
         self.conn: Optional[sqlite3.Connection] = None
 
     def __del__(self):
@@ -177,7 +179,7 @@ class AutomataAgent(Agent):
             return None
 
         self._save_interaction(assistant_message)
-
+        self.latest_observations = observations
         if len(observations) > 0:
             user_observation_message = generate_user_observation_message(observations)
             user_message = {"role": "user", "content": user_observation_message}
@@ -370,21 +372,60 @@ class MasterAutomataAgent(AutomataAgent):
         super().__init__(agent_config, *args, **kwargs)
         self.coordinator = None
 
+    def _setup(self, *args, **kwargs):
+        super()._setup(*args, **kwargs)
+        # Add your custom setup logic for the MasterAutomataAgent here
+
     def set_coordinator(self, coordinator: "AgentCoordinator"):
         """Set the coordinator."""
         self.coordinator = coordinator
 
-    def run(self, *args, **kwargs):
-        """Run the master automata agent."""
-        # Example:
-        result = super().run(*args, **kwargs)
-        # ... (process the result using the coordinator) ...
+    def iter_task(self) -> Optional[Tuple[Dict[str, str], Dict[str, str]]]:
+        result = super().iter_task()
+        if self.completed:
+            return result
+
+        latest_message = self.messages[-1]
+
+        actions = ActionExtractor.extract_actions(self.messages[-2]["content"])
+        observations: Dict[str, str] = {}
+        for agent_action in actions:
+            if isinstance(agent_action, AgentAction):
+                agent_results = self._execute_agent(agent_action)
+                agent_observations = self._generate_observations(agent_results)
+                self._add_agent_observation(observations, agent_observations, agent_action)
+        if len(self.latest_observations) > 0:
+            latest_message["content"] += generate_user_observation_message(
+                observations, include_prefix=False
+            )
+        else:
+            latest_message["content"] = generate_user_observation_message(
+                observations, include_prefix=True
+            )
         return result
 
-    # TODO - I do not feel great abou this method
-    # should we remove it? Should we add config to the AutomataAgent
-    # so that this method can be simplified?
+    def _execute_agent(self, agent_action) -> str:
+        """Generate the agent result."""
+        if agent_action.agent_name not in self.coordinator.agents:
+            raise ValueError(f"Agent {agent_action.agent_name} not found.")
+        # agent_instruction = agent_action.agent_instruction
 
+        return ""
+
+    def _add_agent_observation(
+        self,
+        observations: Dict[str, str],
+        agent_observations: Dict[str, str],
+        agent_action: AgentAction,
+    ) -> None:
+        """Generate the agent observations."""
+        for observation in agent_observations:
+            agent_observation = observation.replace(
+                "return_result", f"{agent_action.agent_name}_result"
+            )
+            observations[agent_observation] = agent_observations[observation]
+
+    # TODO - Can we implement this more cleanly?
     @classmethod
     def from_agent(cls, agent: AutomataAgent) -> "MasterAutomataAgent":
         """Create a master automata agent from an automata agent."""
@@ -393,20 +434,14 @@ class MasterAutomataAgent(AutomataAgent):
         master_agent.instructions = agent.instructions
         master_agent.model = agent.model
         master_agent.initial_payload = agent.initial_payload
-        master_agent.llm_toolkits = agent.llm_toolkits
-        master_agent.instructions = agent.instructions
         master_agent.config_version = agent.config_version
         master_agent.system_instruction_template = agent.system_instruction_template
         master_agent.instruction_input_variables = agent.instruction_input_variables
-        master_agent.model = agent.model
         master_agent.stream = agent.stream
         master_agent.verbose = agent.verbose
         master_agent.max_iters = agent.max_iters
         master_agent.temperature = agent.temperature
         master_agent.session_id = agent.session_id
         master_agent.completed = False
+        master_agent._setup()
         return master_agent
-
-    def _setup(self, *args, **kwargs):
-        super()._setup(*args, **kwargs)
-        # Add your custom setup logic for the MasterAutomataAgent here

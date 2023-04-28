@@ -3,15 +3,23 @@ from abc import ABC, abstractmethod
 from typing import Dict, Final, List, Optional, Tuple, Union, cast
 
 
-def generate_user_observation_message(observations: Dict[str, str]) -> str:
+def generate_user_observation_message(observations: Dict[str, str], include_prefix=True) -> str:
     """Generate a message for the user based on the observations."""
-    message = f"{ActionExtractor.ACTION_INDICATOR} observations\n"
+    message = ""
+    if include_prefix:
+        message += f"{ActionExtractor.ACTION_INDICATOR} observations\n"
     for observation_name in observations.keys():
-        message += f"    {ActionExtractor.ACTION_INDICATOR}{observation_name}" + "\n"
-        message += (
-            f"      {ActionExtractor.ACTION_INDICATOR}{observations[observation_name]}" + "\n"
-        )
+        message = append_observation_message(observation_name, observations, message)
     return message
+
+
+def append_observation_message(observation_name: str, observations: Dict[str, str], message: str):
+    new_message = ""
+    new_message += f"    {ActionExtractor.ACTION_INDICATOR}{observation_name}" + "\n"
+    new_message += (
+        f"      {ActionExtractor.ACTION_INDICATOR}{observations[observation_name]}" + "\n"
+    )
+    return message + new_message
 
 
 def retrieve_completion_message(processed_inputs: Dict[str, str]) -> Optional[str]:
@@ -45,10 +53,10 @@ class ToolAction(Action):
 
 
 class AgentAction(Action):
-    def __init__(self, agent_name: str, agent_query: str, agent_args: List[str]):
+    def __init__(self, agent_name: str, agent_query: str, agent_instruction: List[str]):
         self.agent_name = agent_name
         self.agent_query = agent_query
-        self.agent_args = agent_args
+        self.agent_instruction = agent_instruction
 
     @classmethod
     def from_lines(cls, lines: List[str], index: int):
@@ -91,7 +99,7 @@ class ActionExtractor:
     # Agent indicatation variables
     AGENT_INDICATOR: Final = "agent_query"
     AGENT_NAME_FIELD: Final = "agent_name"
-    AGENT_ARGS_FIELD: Final = "agent_args"
+    AGENT_ARGS_FIELD: Final = "agent_instruction"
     AGENT_QUERY_FIELD: Final = "agent_query"
     ACTION_SPEC_LINES: Final = 3
 
@@ -122,10 +130,12 @@ class ActionExtractor:
                 action = AgentAction.from_lines(lines, index)
                 actions.append(action)  # type: ignore
                 skip_lines = cls.ACTION_SPEC_LINES
+
             elif cls._is_return_result_action(line):
                 action = ResultAction.from_lines(lines, index)
                 actions.append(action)  # type: ignore
                 skip_lines = cls.RESULT_SPEC_LINES
+
             else:
                 (is_code, skip_lines) = cls._process_action_input(
                     index, line, lines, action, is_code, skip_lines
@@ -180,7 +190,7 @@ class ActionExtractor:
             actions.append(action)
         agent_query = agent_query_line.split(ActionExtractor.ACTION_INDICATOR)[1].strip()
         agent_name = agent_name_line.split(ActionExtractor.ACTION_INDICATOR)[1].strip()
-        return AgentAction(agent_name=agent_name, agent_query=agent_query, agent_args=[])
+        return AgentAction(agent_name=agent_name, agent_query=agent_query, agent_instruction=[])
 
     @staticmethod
     def _is_return_result_action(line: str) -> bool:
@@ -214,7 +224,7 @@ class ActionExtractor:
         """Process an action input."""
         if action is not None:
             if isinstance(action, AgentAction):
-                inputs = cast(List[str], action.agent_args)
+                inputs = cast(List[str], action.agent_instruction)
             elif isinstance(action, ToolAction):
                 inputs = cast(List[str], action.tool_args)
             elif isinstance(action, ResultAction):
