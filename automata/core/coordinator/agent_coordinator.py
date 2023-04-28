@@ -45,8 +45,19 @@ class AgentCoordinator:
             instance for instance in self.agent_instances if instance.name != agent_name
         ]
 
-    def _build_agent_message(self):
+    def run_agent(self, agent_name, instruction) -> str:
+        agent_instance = self._select_agent_instance(agent_name)
+        return agent_instance.run(instruction)
+
+    def _build_agent_message(self) -> str:
         """Builds a message containing all agents and their descriptions."""
         return "Agents:\n" + "".join(
             [f"\n{agent.name}: {agent.description}\n" for agent in self.agent_instances]
         )
+
+    def _select_agent_instance(self, agent_name) -> AgentInstance:
+        """Selects an agent instance by name."""
+        for agent in self.agent_instances:
+            if agent.name == agent_name:
+                return agent
+        raise ValueError("Agent does not exist.")
