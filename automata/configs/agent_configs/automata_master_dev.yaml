@@ -1,0 +1,12 @@
+instruction_input_variables:
+  - tools
+  - agents
+system_instruction_template: >
+  Tools:
+
+  {tools}
+
+  Agents:
+
+  {agents}
+template_format: "f-string"

@@ -406,10 +406,7 @@ class MasterAutomataAgent(AutomataAgent):
 
     def _execute_agent(self, agent_action) -> str:
         """Generate the agent result."""
-        if agent_action.agent_name not in self.coordinator.agents:
-            raise ValueError(f"Agent {agent_action.agent_name} not found.")
-        # agent_instruction = agent_action.agent_instruction
-
+        self.coordinator.run_agent(agent_action)
         return ""
 
     def _add_agent_observation(
