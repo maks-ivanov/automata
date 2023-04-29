@@ -1,9 +1,11 @@
 import os
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 import yaml
 from pydantic import BaseModel
+
+from automata.core.base.tool import Toolkit, ToolkitType
 
 
 class ConfigCategory(Enum):
@@ -46,6 +48,7 @@ class AutomataAgentConfig(BaseModel):
         max_iters (int): The maximum number of iterations to run.
         temperature (float): The temperature to use for the agent.
         session_id (Optional[str]): The session ID to use for the agent.
+        instruction_version (InstructionConfigVersion): Config version of the introduction instruction.
     """
 
     class Config:
@@ -54,9 +57,7 @@ class AutomataAgentConfig(BaseModel):
 
     config_version: str = "default"
     initial_payload: Dict[str, str] = {}
-    llm_toolkits: Dict[
-        Any, Any
-    ] = {}  # Dict[ToolkitType, Toolkit], not specified due to circular import
+    llm_toolkits: Dict[ToolkitType, Toolkit] = {}
     instructions: str = ""
     description: str = ""
     system_instruction_template: str = ""
@@ -67,6 +68,7 @@ class AutomataAgentConfig(BaseModel):
     max_iters: int = 1_000_000
     temperature: float = 0.7
     session_id: Optional[str] = None
+    instruction_version: str = InstructionConfigVersion.AGENT_INTRODUCTION_PROD.value
 
     @classmethod
     def load(cls, config_version: AgentConfigVersion) -> "AutomataAgentConfig":

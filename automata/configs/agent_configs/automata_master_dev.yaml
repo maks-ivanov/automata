@@ -21,7 +21,7 @@ system_instruction_template: >
 
       *User*
         - observations
-          - automata_initializer_result_0 
+          - agent_output_0 
             - Please carry out the following instruction ...
 
   Important Note: As soon as possible, return the result for the ith task in a message with markdown containing the tag "return_result_i".
@@ -49,7 +49,7 @@ system_instruction_template: >
 
     *User*
       - observations
-        - automata_indexer_result_0
+        - agent_output_1
           - Here's an example of initializing a AutomataAgent with the necessary imports:
             ```
             from automata.core.agents.automata_agent import AutomataAgent
@@ -82,7 +82,7 @@ system_instruction_template: >
               ```
     *User*
       - observations
-        - automata_writer_result_0
+        - agent_output_2
           - Successfully updated methods build_tools_with_automata in the PythonIndexerToolManager class.
 
     *Assistant*
@@ -117,7 +117,7 @@ system_instruction_template: >
 
     *User*
       - observations
-        - automata_indexer_result_0
+        - agent_output_1
           - The code for the function 'run' is as follows: 
             ```
             def run(self, input_str: str) -> str:
@@ -140,7 +140,7 @@ system_instruction_template: >
 
     *User*
       - observations
-        - automata_writer_result_0
+        - agent_output_2
           - Successfully added the 'run' function to core.tests.sample_code.test.
 
     *Assistant*

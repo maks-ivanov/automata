@@ -218,18 +218,18 @@ def test_extract_actions_7():
         - thoughts
         - I can retrieve this information directly with the python indexer.
         - actions
-        - tool_query_0
-            - tool_name
-                - python-indexer-retrieve-docstring
-            - tool_args
-                - core.utils
-                - calculate_similarity
-        - tool_query_1
-            - tool_name
-                - python-indexer-retrieve-code
-            - tool_args
-                - core.utils
-                - calculate_similarity
+            - tool_query_0
+                - tool_name
+                    - python-indexer-retrieve-docstring
+                - tool_args
+                    - core.utils
+                    - calculate_similarity
+            - tool_query_1
+                - tool_name
+                    - python-indexer-retrieve-code
+                - tool_args
+                    - core.utils
+                    - calculate_similarity
         """
     )
     actions = ActionExtractor.extract_actions(text)

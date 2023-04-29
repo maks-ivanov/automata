@@ -33,3 +33,11 @@ def automata_agent_builder():
     agent_config = AutomataAgentConfig.load(config_version)
     agent_builder = AutomataAgentBuilder(agent_config)
     return agent_builder
+
+
+@pytest.fixture
+def automata_agent_with_dev_master_builder():
+    config_version = AgentConfigVersion.AUTOMATA_MASTER_DEV
+    agent_config = AutomataAgentConfig.load(config_version)
+    agent_builder = AutomataAgentBuilder(agent_config)
+    return agent_builder

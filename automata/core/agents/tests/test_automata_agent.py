@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import pytest
 
-from automata.core.agents.automata_agent import AutomataAgent
+from automata.core.agents.automata_agent import AutomataAgent, MasterAutomataAgent
 from automata.tool_management.tool_management_utils import build_llm_toolkits
 
 
@@ -26,7 +26,7 @@ def test_build_initial_messages(automata_agent):
         "user_input_instructions": "DUMMY_INSTRUCTIONS",
     }
     initial_messages = automata_agent._build_initial_messages(formatters)
-    assert AutomataAgent.INITIALIZER_DUMMY_TOOL in initial_messages[0]["content"]
+    assert AutomataAgent.INITIALIZER_DUMMY in initial_messages[0]["content"]
     assert "assistant" == initial_messages[0]["role"]
     assert "DUMMY_INSTRUCTIONS" in initial_messages[1]["content"]
     assert "user" == initial_messages[1]["role"]
@@ -111,7 +111,7 @@ def test_iter_task_with_completion_message(
     assert "AutomataAgent is imported in the following files:" in completion_message
 
 
-def mock_openai_response_with_completion_message_to_parse():
+def mock_openai_response_with_completion_tool_message_to_parse():
     return {
         "choices": [
             {
@@ -132,7 +132,9 @@ def mock_openai_response_with_completion_message_to_parse():
     }
 
 
-@pytest.mark.parametrize("api_response", [mock_openai_response_with_completion_message_to_parse()])
+@pytest.mark.parametrize(
+    "api_response", [mock_openai_response_with_completion_tool_message_to_parse()]
+)
 @patch("openai.ChatCompletion.create")
 def test_iter_task_with_parsed_completion_message(
     mock_openai_chatcompletion_create, api_response, automata_agent
@@ -147,3 +149,45 @@ def test_iter_task_with_parsed_completion_message(
         stripped_completion_message[1]
         == "- Please carry out the following instruction Test instruction.."
     )
+
+
+def mock_openai_response_with_completion_agent_message_to_parse():
+    return {
+        "choices": [
+            {
+                "message": {
+                    "content": textwrap.dedent(
+                        """
+                        - thoughts
+                          - I can now return the requested information.
+                        - actions
+                          
+                          - return_result_0
+                            - {agent_query_0}
+                        """
+                    )
+                }
+            }
+        ]
+    }
+
+
+@pytest.mark.parametrize(
+    "api_response", [mock_openai_response_with_completion_agent_message_to_parse()]
+)
+@patch("openai.ChatCompletion.create")
+def test_iter_task_with_parsed_completion_message_2(
+    mock_openai_chatcompletion_create,
+    api_response,
+    automata_agent_builder,
+):
+    automata_agent = MasterAutomataAgent.from_agent(
+        automata_agent_builder.with_instruction_version("agent_introduction_dev").build()
+    )
+
+    # Mock the API response
+    mock_openai_chatcompletion_create.return_value = api_response
+    automata_agent.iter_task()
+    completion_message = automata_agent.messages[-1]["content"]
+    stripped_completion_message = [ele.strip() for ele in completion_message.split("\n")]
+    assert stripped_completion_message[0] == "{agent_query_0}"

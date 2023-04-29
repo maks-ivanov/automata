@@ -120,13 +120,13 @@ def mock_openai_response_with_agent_query():
                     "content": textwrap.dedent(
                         """
                         - thoughts
-                        - I can retrieve this information directly with the python indexer.
+                            - I can retrieve this information directly with the python indexer.
                         - actions
-                        - agent_query_0
-                            - agent_name
-                                - agent_0
-                            - agent_instruction
-                                - Begin
+                            - agent_query_0
+                                - agent_name
+                                    - agent_0
+                                - agent_instruction
+                                    - Begin
                         """
                     )
                 }
@@ -164,7 +164,8 @@ def test_iter_task_with_agent_query(
     master_agent.iter_task()
 
     completion_message = master_agent.messages[-1]["content"]
-    assert "- agent_0_result_0" in completion_message
+    print("completion_message = ", completion_message)
+    assert "- agent_output_0" in completion_message
     assert "- This is a mock return " in completion_message
 
 
@@ -176,25 +177,25 @@ def mock_openai_response_with_agent_query_and_tool_queries():
                     "content": textwrap.dedent(
                         """
                         - thoughts
-                        - I can retrieve this information directly with the python indexer.
+                            - I can retrieve this information directly with the python indexer.
                         - actions
-                        - tool_query_0
-                            - tool_name
-                                - python-indexer-retrieve-docstring
-                            - tool_args
-                                - core.utils
-                                - calculate_similarity
-                        - tool_query_1
-                            - tool_name
-                                - python-indexer-retrieve-code
-                            - tool_args
-                                - core.utils
-                                - calculate_similarity
-                        - agent_query_0
-                            - agent_name
-                                - agent_0
-                            - agent_instruction
-                                - Begin
+                            - tool_query_0
+                                - tool_name
+                                    - python-indexer-retrieve-docstring
+                                - tool_args
+                                    - core.utils
+                                    - calculate_similarity
+                            - tool_query_1
+                                - tool_name
+                                    - python-indexer-retrieve-code
+                                - tool_args
+                                    - core.utils
+                                    - calculate_similarity
+                            - agent_query_1
+                                - agent_name
+                                    - agent_0
+                                - agent_instruction
+                                    - Begin
                         """
                     )
                 }
@@ -221,7 +222,66 @@ def test_iter_task_with_agent_and_tool_query(
     completion_message = master_agent.messages[-1]["content"]
     assert "- tool_output_0" in completion_message
     assert "- tool_output_1" in completion_message
-    assert "- agent_0_result_0" in completion_message
+    assert "- agent_output_1" in completion_message
+    assert "- This is a mock return " in completion_message
+
+
+@pytest.mark.parametrize("api_response", [mock_openai_response_with_agent_query()])
+@patch("openai.ChatCompletion.create")
+def test_iter_task_with_agent_and_tool_query_2(
+    mock_openai_chatcompletion_create, api_response, coordinator, master_agent
+):
+    coordinator.set_master_agent(master_agent)
+    master_agent.set_coordinator(coordinator)
+    mock_openai_chatcompletion_create.return_value = api_response
+
+    master_agent._execute_agent = MagicMock(side_effect=mocked_execute_agent)
+
+    master_agent.iter_task()
+
+    completion_message = master_agent.messages[-1]["content"]
+    assert "- agent_output_0" in completion_message
+    assert "- This is a mock return " in completion_message
+
+
+def mock_openai_response_with_agent_query_1():
+    return {
+        "choices": [
+            {
+                "message": {
+                    "content": textwrap.dedent(
+                        """
+                        - thoughts
+                            - I can retrieve this information directly with the python indexer.
+                        - actions
+                        - agent_query_1
+                            - agent_name
+                                - agent_0
+                            - agent_instruction
+                                - Begin
+                        """
+                    )
+                }
+            }
+        ]
+    }
+
+
+@pytest.mark.parametrize("api_response", [mock_openai_response_with_agent_query_1()])
+@patch("openai.ChatCompletion.create")
+def test_iter_task_with_agent_and_tool_query_3(
+    mock_openai_chatcompletion_create, api_response, coordinator, master_agent
+):
+    coordinator.set_master_agent(master_agent)
+    master_agent.set_coordinator(coordinator)
+    mock_openai_chatcompletion_create.return_value = api_response
+
+    master_agent._execute_agent = MagicMock(side_effect=mocked_execute_agent)
+
+    master_agent.iter_task()
+
+    completion_message = master_agent.messages[-1]["content"]
+    assert "- agent_output_1" in completion_message
     assert "- This is a mock return " in completion_message
 
 

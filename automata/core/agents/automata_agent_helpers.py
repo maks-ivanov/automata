@@ -109,6 +109,7 @@ class ActionExtractor:
 
     @classmethod
     def extract_actions(cls, text: str) -> List[ActionTypes]:
+        print("Called extract actions on text = ", text)
         lines = text.split("\n")
         actions: List[ActionTypes] = []
         action: Optional[ActionTypes] = None

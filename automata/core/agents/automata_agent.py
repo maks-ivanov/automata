@@ -40,11 +40,7 @@ from termcolor import colored
 from transformers import GPT2Tokenizer
 
 from automata.config import CONVERSATION_DB_NAME, OPENAI_API_KEY
-from automata.configs.config_types import (
-    AutomataAgentConfig,
-    ConfigCategory,
-    InstructionConfigVersion,
-)
+from automata.configs.config_types import AutomataAgentConfig, ConfigCategory
 from automata.core.agents.agent import Agent
 from automata.core.agents.automata_agent_helpers import (
     ActionExtractor,
@@ -73,8 +69,8 @@ class AutomataAgent(Agent):
 
     CONTINUE_MESSAGE: Final = "Continue, and return a result JSON when finished."
     NUM_DEFAULT_MESSAGES: Final = 3  # Prompt + Assistant Initialization + User Task
-    INITIALIZER_DUMMY_TOOL: Final = "automata-initializer"
-    ERROR_DUMMY_TOOL: Final = "error-reporter"
+    INITIALIZER_DUMMY: Final = "automata_initializer"
+    ERROR_DUMMY_TOOL: Final = "error_reporter"
 
     def __init__(self, config: Optional[AutomataAgentConfig] = None):
         """
@@ -100,6 +96,7 @@ class AutomataAgent(Agent):
         self.max_iters = config.max_iters
         self.temperature = config.temperature
         self.session_id = config.session_id
+        self.instruction_version = config.instruction_version
         self.completed = False
         self.latest_observations: Dict[str, str] = {}
         self.conn: Optional[sqlite3.Connection] = None
@@ -252,7 +249,7 @@ class AutomataAgent(Agent):
                     action.tool_args,
                 )
                 # Skip the initializer dummy tool which exists only for providing context
-                if tool_name == AutomataAgent.INITIALIZER_DUMMY_TOOL:
+                if tool_name == AutomataAgent.INITIALIZER_DUMMY:
                     continue
                 if tool_name == AutomataAgent.ERROR_DUMMY_TOOL:
                     # Input becomes the output when an error is registered
@@ -333,26 +330,26 @@ class AutomataAgent(Agent):
 
     def _parse_completion_message(self, completion_message: str) -> str:
         """Parse the completion message and replace the tool outputs."""
-        tool_outputs = {}
+        outputs = {}
         for message in self.messages:
             pattern = r"-\s(tool_output_\d+)\s+-\s(.*?)(?=-\s(tool_output_\d+)|$)"
             matches = re.finditer(pattern, message["content"], re.DOTALL)
             for match in matches:
                 tool_name, tool_output = match.group(1), match.group(2).strip()
-                tool_outputs[tool_name] = tool_output
-        for tool_name in tool_outputs:
+                outputs[tool_name] = tool_output
+
+        for output_name in outputs:
             completion_message = completion_message.replace(
-                f"{{{tool_name}}}", tool_outputs[tool_name]
+                f"{{{output_name}}}", outputs[output_name]
             )
         return completion_message
 
     def _build_initial_messages(self, formatters: Dict[str, str]) -> List[Dict[str, str]]:
         assert "user_input_instructions" in formatters
-        formatters["initializer_dummy_tool"] = AutomataAgent.INITIALIZER_DUMMY_TOOL
+        formatters["initializer_dummy_tool"] = AutomataAgent.INITIALIZER_DUMMY
 
         messages_config = load_yaml_config(
-            ConfigCategory.INSTRUCTION.value,
-            InstructionConfigVersion.AGENT_INTRODUCTION_PROD.value,
+            ConfigCategory.INSTRUCTION.value, self.instruction_version
         )
         initial_messages = messages_config["initial_messages"]
 
@@ -382,15 +379,17 @@ class MasterAutomataAgent(AutomataAgent):
 
     def iter_task(self) -> Optional[Tuple[Dict[str, str], Dict[str, str]]]:
         result = super().iter_task()
-        if self.completed:
-            return result
 
-        latest_message = self.messages[-1]
+        lookback_index = -2 if not self.completed else -3
 
-        actions = ActionExtractor.extract_actions(self.messages[-2]["content"])
+        latest_message = self.messages[lookback_index + 1]
+
+        actions = ActionExtractor.extract_actions(self.messages[lookback_index]["content"])
         observations: Dict[str, str] = {}
         for agent_action in actions:
             if isinstance(agent_action, AgentAction):
+                if agent_action.agent_name == AutomataAgent.INITIALIZER_DUMMY:
+                    continue
                 agent_results = self._execute_agent(agent_action)
                 agent_observations = self._generate_observations(agent_results)
                 self._add_agent_observation(observations, agent_observations, agent_action)
@@ -402,6 +401,9 @@ class MasterAutomataAgent(AutomataAgent):
             latest_message["content"] = generate_user_observation_message(
                 observations, include_prefix=True
             )
+        if self.completed:
+            self._parse_completion_message(latest_message)
+
         return result
 
     def _execute_agent(self, agent_action) -> str:
@@ -418,9 +420,27 @@ class MasterAutomataAgent(AutomataAgent):
         """Generate the agent observations."""
         for observation in agent_observations:
             agent_observation = observation.replace(
-                "return_result", f"{agent_action.agent_name}_result"
+                "return_result_0", agent_action.agent_query.replace("query", "output")
             )
             observations[agent_observation] = agent_observations[observation]
+
+    def _parse_completion_message(self, completion_message: str) -> str:
+        """Parse the completion message and replace the tool outputs."""
+        super()._parse_completion_message(completion_message)
+
+        outputs = {}
+        for message in self.messages:
+            pattern = r"-\s(agent_output_\d+)\s+-\s(.*?)(?=-\s(agent_output_\d+)|$)"
+            matches = re.finditer(pattern, message["content"], re.DOTALL)
+            for match in matches:
+                agent_name, agent_output = match.group(1), match.group(2).strip()
+                outputs[agent_name] = agent_output
+
+        for output_name in outputs:
+            completion_message = completion_message.replace(
+                f"{{{output_name}}}", outputs[output_name]
+            )
+        return completion_message
 
     # TODO - Can we implement this more cleanly?
     @classmethod

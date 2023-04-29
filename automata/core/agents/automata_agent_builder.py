@@ -2,7 +2,7 @@ from typing import Dict, Optional
 
 from pydantic import BaseModel, PrivateAttr
 
-from automata.configs.config_types import AutomataAgentConfig
+from automata.configs.config_types import AutomataAgentConfig, InstructionConfigVersion
 from automata.core.base.tool import Toolkit, ToolkitType
 
 from .automata_agent import AutomataAgent
@@ -61,6 +61,13 @@ class AutomataAgentBuilder(BaseModel):
         if session_id and (not isinstance(session_id, str)):
             raise ValueError("Session Id must be a str.")
         self._instance.session_id = session_id
+        return self
+
+    def with_instruction_version(self, instruction_version: str):
+        if not isinstance(instruction_version, str):
+            raise ValueError("Instruction version must be a str.")
+        InstructionConfigVersion(instruction_version)
+        self._instance.instruction_version = instruction_version
         return self
 
     def build(self):
