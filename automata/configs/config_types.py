@@ -12,6 +12,7 @@ class ConfigCategory(Enum):
 
 
 class InstructionConfigVersion(Enum):
+    AGENT_INTRODUCTION_DEV = "agent_introduction_dev"
     AGENT_INTRODUCTION_PROD = "agent_introduction_prod"
 
 

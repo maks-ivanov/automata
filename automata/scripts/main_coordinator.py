@@ -96,11 +96,16 @@ def main():
     coordinator = AgentCoordinator()
 
     agent_configs = {
-        config_name: AutomataAgentConfig.load(AgentConfigVersion(config_name))
+        config_name.replace("_dev", "").replace("_prod", ""): AutomataAgentConfig.load(
+            AgentConfigVersion(config_name)
+        )
         for config_name in args.agent_config_versions.split(",")
     }
     for config_name in agent_configs.keys():
         config = agent_configs[config_name]
+        print(
+            f"Adding Agent with name={config_name}, config={config}, description={config.description}"
+        )
         agent = AgentInstance(name=config_name, config=config, description=config.description)
         coordinator.add_agent_instance(agent)
 
@@ -131,6 +136,7 @@ def main():
     )
 
     coordinator.set_master_agent(master_agent)
+    master_agent.set_coordinator(coordinator)
 
     master_agent.run()
 

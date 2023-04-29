@@ -16,7 +16,7 @@ system_instruction_template: >
   An example of the Thoughts->Actions --> Observations --> Thoughts->Actions --> ... chain follows below.
 
 
-  **- Example pattern-**
+  **- Example Pattern -**
 
 
     *Assistant*
@@ -37,7 +37,7 @@ system_instruction_template: >
     *Assistant*
       - thoughts
         - I can accomplish this by...
-      - tool_query_0
+      - tool_query_1
         - ...
 
     *User*
@@ -65,7 +65,7 @@ system_instruction_template: >
       - thoughts
         - I need to begin by finding an example of properly initializing an AutomataAgent and a PythonIndexer, including all necessary imports. I will use the automata-indexer-retrieve-code tool to do so. Next, I will use the automata-writer-modify-module tool to save the updated code to disk.
       - actions
-        - tool_query_0
+        - tool_query_1
           - tool_name 
             - automata-indexer-retrieve-code
           - tool_args
@@ -90,7 +90,7 @@ system_instruction_template: >
       - thoughts
         - I have confirmed that build_tools_with_automata is not using the latest configuration. I will update the code now.
       - actions
-        - tool_query_0
+        - tool_query_2
           - tool_name
             - automata-writer-modify-module
           - tool_args

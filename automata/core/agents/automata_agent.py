@@ -232,7 +232,7 @@ class AutomataAgent(Agent):
             )
             for message in initial_messages:
                 self._save_interaction(message)
-        logger.debug("Initializing with System Instruction:%s\n" % system_instruction)
+        logger.debug("Initializing with System Instruction:%s\n\n" % system_instruction)
         logger.debug("-" * 60)
         if set(self.instruction_input_variables) != set(list(self.initial_payload.keys())):
             raise ValueError(f"Initial payload does not match instruction_input_variables.")
