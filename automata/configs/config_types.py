@@ -1,9 +1,11 @@
 import os
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 import yaml
 from pydantic import BaseModel
+
+from automata.core.base.tool import Toolkit, ToolkitType
 
 
 class ConfigCategory(Enum):
@@ -12,12 +14,17 @@ class ConfigCategory(Enum):
 
 
 class InstructionConfigVersion(Enum):
+    AGENT_INTRODUCTION_DEV = "agent_introduction_dev"
     AGENT_INTRODUCTION_PROD = "agent_introduction_prod"
 
 
 class AgentConfigVersion(Enum):
     DEFAULT = "default"
     TEST = "test"
+
+    AUTOMATA_INDEXER_DEV = "automata_indexer_dev"
+    AUTOMATA_WRITER_DEV = "automata_writer_dev"
+    AUTOMATA_MASTER_DEV = "automata_master_dev"
 
     AUTOMATA_INDEXER_PROD = "automata_indexer_prod"
     AUTOMATA_WRITER_PROD = "automata_writer_prod"
@@ -41,6 +48,7 @@ class AutomataAgentConfig(BaseModel):
         max_iters (int): The maximum number of iterations to run.
         temperature (float): The temperature to use for the agent.
         session_id (Optional[str]): The session ID to use for the agent.
+        instruction_version (InstructionConfigVersion): Config version of the introduction instruction.
     """
 
     class Config:
@@ -49,10 +57,9 @@ class AutomataAgentConfig(BaseModel):
 
     config_version: str = "default"
     initial_payload: Dict[str, str] = {}
-    llm_toolkits: Dict[
-        Any, Any
-    ] = {}  # Dict[ToolkitType, Toolkit], not specified due to circular import
+    llm_toolkits: Dict[ToolkitType, Toolkit] = {}
     instructions: str = ""
+    description: str = ""
     system_instruction_template: str = ""
     instruction_input_variables: List[str] = []
     model: str = "gpt-4"
@@ -61,15 +68,32 @@ class AutomataAgentConfig(BaseModel):
     max_iters: int = 1_000_000
     temperature: float = 0.7
     session_id: Optional[str] = None
+    instruction_version: str = InstructionConfigVersion.AGENT_INTRODUCTION_PROD.value
 
     @classmethod
     def load(cls, config_version: AgentConfigVersion) -> "AutomataAgentConfig":
+        from automata.tool_management.tool_management_utils import build_llm_toolkits
+
         if config_version == AgentConfigVersion.DEFAULT:
             return AutomataAgentConfig()
         file_dir_path = os.path.dirname(os.path.abspath(__file__))
         config_abs_path = os.path.join(
             file_dir_path, ConfigCategory.AGENT.value, f"{config_version.value}.yaml"
         )
+
         with open(config_abs_path, "r") as file:
             loaded_yaml = yaml.safe_load(file)
-            return AutomataAgentConfig(**loaded_yaml)
+            if "tools" in loaded_yaml:
+                tools = loaded_yaml["tools"].split(",")
+                loaded_yaml["llm_toolkits"] = build_llm_toolkits(tools)
+
+        config = AutomataAgentConfig(**loaded_yaml)
+
+        if "overview" in config.instruction_input_variables:
+            from automata.core.utils import root_py_path
+            from automata.tools.python_tools.python_indexer import PythonIndexer
+
+            indexer = PythonIndexer(root_py_path())
+            config.initial_payload["overview"] = indexer.get_overview()
+
+        return config

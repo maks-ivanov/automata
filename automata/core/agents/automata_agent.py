@@ -27,26 +27,25 @@
                But before adding this cpability, we need to continue
                polishing the framework
 
-        TODO - Think about how to introduce the starting instructions to configs
+        TODO - Add field for instruction config version to agent + builder
 """
 import logging
 import re
 import sqlite3
 import uuid
-from typing import Dict, Final, List, Optional, Tuple, cast
+from typing import TYPE_CHECKING, Any, Dict, Final, List, Optional, Tuple, cast
 
 import openai
 from termcolor import colored
-from transformers import GPT2Tokenizer
 
 from automata.config import CONVERSATION_DB_NAME, OPENAI_API_KEY
-from automata.configs.config_types import (
-    AutomataAgentConfig,
-    ConfigCategory,
-    InstructionConfigVersion,
-)
+from automata.configs.config_types import AutomataAgentConfig, ConfigCategory
+from automata.core.agents.agent import Agent
 from automata.core.agents.automata_agent_helpers import (
     ActionExtractor,
+    AgentAction,
+    ResultAction,
+    ToolAction,
     generate_user_observation_message,
     retrieve_completion_message,
 )
@@ -54,8 +53,13 @@ from automata.core.utils import format_config, load_yaml_config
 
 logger = logging.getLogger(__name__)
 
+if TYPE_CHECKING:
+    from automata.core.coordinator.agent_coordinator import (  # This import will only happen during type checking
+        AgentCoordinator,
+    )
 
-class AutomataAgent:
+
+class AutomataAgent(Agent):
     """
     AutomataAgent is an autonomous agent that performs the actual work of the Automata
     system. Automata are responsible for executing instructions and reporting
@@ -64,8 +68,8 @@ class AutomataAgent:
 
     CONTINUE_MESSAGE: Final = "Continue, and return a result JSON when finished."
     NUM_DEFAULT_MESSAGES: Final = 3  # Prompt + Assistant Initialization + User Task
-    INITIALIZER_DUMMY_TOOL: Final = "automata-initializer"
-    ERROR_DUMMY_TOOL: Final = "error-reporter"
+    INITIALIZER_DUMMY: Final = "automata_initializer"
+    ERROR_DUMMY_TOOL: Final = "error_reporter"
 
     def __init__(self, config: Optional[AutomataAgentConfig] = None):
         """
@@ -91,11 +95,16 @@ class AutomataAgent:
         self.max_iters = config.max_iters
         self.temperature = config.temperature
         self.session_id = config.session_id
+        self.instruction_version = config.instruction_version
         self.completed = False
+        self.is_master_agent = False
+        self.latest_observations: Dict[str, str] = {}
+        self.conn: Optional[sqlite3.Connection] = None
 
     def __del__(self):
         """Close the connection to the agent."""
-        self.conn.close()
+        if self.conn:
+            self.conn.close()
 
     def run(self) -> str:
         latest_responses = self.iter_task()
@@ -112,71 +121,37 @@ class AutomataAgent:
         """Run the test and report the tool outputs back to the master."""
         if self.completed:
             raise ValueError("Cannot run an agent that has already completed.")
-        context_length = sum(
-            [
-                len(
-                    self.tokenizer.encode(message["content"], max_length=1024 * 8, truncation=True)
-                )
-                for message in self.messages
-            ]
-        )
-        logger.debug("Chat Context length: %s", context_length)
-        logger.debug("-" * 60)
-        logger.info("Running instruction...")
+
         response_summary = openai.ChatCompletion.create(
             model=self.model,
             messages=self.messages,
             temperature=self.temperature,
             stream=self.stream,
         )
-        if self.stream:
-            print(colored("\n>>>", "green", attrs=["blink"]) + colored(" Agent:", "green"))
-            latest_accumulation = ""
-            stream_separator = " "
-            response_text = ""
-            for chunk in response_summary:
-                if "content" in chunk["choices"][0]["delta"]:
-                    chunk_content = chunk["choices"][0]["delta"]["content"]
-                    latest_accumulation += chunk_content
-                    response_text += chunk_content
-                if stream_separator in latest_accumulation:
-                    words = latest_accumulation.split(stream_separator)
-                    for word in words[:-1]:
-                        print(colored(str(word), "green"), end=" ", flush=True)
-                    latest_accumulation = words[-1]
-            print(colored(str(latest_accumulation), "green"))
-        else:
-            response_text = response_summary["choices"][0]["message"]["content"]
-        logger.debug("OpenAI Response:\n%s\n" % response_text)
-        assistant_message = {"role": "assistant", "content": response_text}
-
-        responses: List[Dict[str, str]] = []
-        responses.append(assistant_message)
-
+        response_text = (
+            self._stream_message(response_summary)
+            if self.stream
+            else response_summary["choices"][0]["message"]["content"]
+        )
         observations = self._generate_observations(response_text)
         completion_message = retrieve_completion_message(observations)
-
-        if completion_message:
+        if completion_message is not None:
             self.completed = True
             self._save_interaction(
-                {
-                    "role": "assistant",
-                    "content": self._parse_completion_message(completion_message),
-                }
+                "assistant",
+                self._parse_completion_message(completion_message),
             )
             return None
 
-        self._save_interaction(assistant_message)
+        assistant_message = self._save_interaction("assistant", response_text)
+        user_message = self._save_interaction(
+            "user",
+            generate_user_observation_message(observations)
+            if len(observations) > 0
+            else AutomataAgent.CONTINUE_MESSAGE,
+        )
 
-        if len(observations) > 0:
-            user_observation_message = generate_user_observation_message(observations)
-            user_message = {"role": "user", "content": user_observation_message}
-            logger.debug("Synthetic User Message:\n%s\n" % user_observation_message)
-        else:
-            user_message = {"role": "user", "content": AutomataAgent.CONTINUE_MESSAGE}
-            logger.debug("Synthetic User Message:\n%s\n" % AutomataAgent.CONTINUE_MESSAGE)
-        responses.append(user_message)
-        self._save_interaction(user_message)
+        self.latest_observations = observations
         return (assistant_message, user_message)
 
     def replay_messages(self) -> str:
@@ -204,23 +179,21 @@ class AutomataAgent:
         """Setup the agent."""
         openai.api_key = OPENAI_API_KEY
         self.messages = []
-        self.tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
         if "tools" in self.instruction_input_variables:
             self.initial_payload["tools"] = self._build_tool_message()
-
         system_instruction = format_config(self.initial_payload, self.system_instruction_template)
         self._init_database()
         if self.session_id:
             self._load_previous_interactions()
         else:
             self.session_id = str(uuid.uuid4())
-            self._save_interaction({"role": "system", "content": system_instruction})
+            self._save_interaction("system", system_instruction)
             initial_messages = self._build_initial_messages(
                 {"user_input_instructions": self.instructions}
             )
             for message in initial_messages:
-                self._save_interaction(message)
-        logger.debug("Initializing with System Instruction:%s\n" % system_instruction)
+                self._save_interaction(message["role"], message["content"])
+        logger.debug("Initializing with System Instruction:%s\n\n" % system_instruction)
         logger.debug("-" * 60)
         if set(self.instruction_input_variables) != set(list(self.initial_payload.keys())):
             raise ValueError(f"Initial payload does not match instruction_input_variables.")
@@ -229,37 +202,33 @@ class AutomataAgent:
 
     def _generate_observations(self, response_text: str) -> Dict[str, str]:
         """Process the messages in the conversation."""
-        actions = ActionExtractor.extract_actions(response_text)
-        logger.debug("Actions: %s" % actions)
         outputs = {}
-        (result_counter, tool_counter) = (0, 0)
-        for action_request in actions:
-            (tool_query, tool_name, tool_input) = (
-                action_request[ActionExtractor.TOOL_QUERY_FIELD],
-                action_request[ActionExtractor.TOOL_NAME_FIELD],
-                action_request[ActionExtractor.TOOL_ARGS_FIELD],
-            )
-            # Skip the initializer dummy tool which exists only for providing context
-            if tool_name == AutomataAgent.INITIALIZER_DUMMY_TOOL:
-                continue
-            # Skip the return result indicator which exists only for marking the return result
-            if ActionExtractor.RETURN_RESULT_INDICATOR in tool_name:
-                outputs[
-                    "%s_%i" % (ActionExtractor.RETURN_RESULT_INDICATOR, result_counter)
-                ] = "\n".join(tool_input)
-                result_counter += 1
-                continue
-            if tool_name == AutomataAgent.ERROR_DUMMY_TOOL:
-                # Input becomes the output when an error is registered
-                outputs[tool_query.replace("query", "output")] = cast(str, tool_input)
-                tool_counter += 1
-            else:
-                tool_output = self._execute_tool(tool_name, tool_input)
-                outputs[tool_query.replace("query", "output")] = tool_output
-                tool_counter += 1
+        actions = ActionExtractor.extract_actions(response_text)
+        for action in actions:
+            if isinstance(action, ToolAction):
+                (tool_query, tool_name, tool_input) = (
+                    action.tool_query,
+                    action.tool_name,
+                    action.tool_args,
+                )
+                # Skip the initializer dummy tool which exists only for providing context
+                if tool_name == AutomataAgent.INITIALIZER_DUMMY:
+                    continue
+                if tool_name == AutomataAgent.ERROR_DUMMY_TOOL:
+                    # Input becomes the output when an error is registered
+                    outputs[tool_query.replace("query", "output")] = cast(str, tool_input)
+                else:
+                    tool_output = self._execute_tool(tool_name, tool_input)
+                    outputs[tool_query.replace("query", "output")] = tool_output
+            elif isinstance(action, ResultAction):
+                (result_name, result_outputs) = (action.result_name, action.result_outputs)
+                # Skip the return result indicator which exists only for marking the return result
+                outputs[result_name] = "\n".join(result_outputs)
+
         return outputs
 
     def _execute_tool(self, tool_name: str, tool_input: List[str]) -> str:
+        """Execute the tool with the given name and input."""
         tool_found = False
         tool_output = None
 
@@ -288,17 +257,19 @@ class AutomataAgent:
         )
         self.conn.commit()
 
-    def _save_interaction(self, interaction: Dict[str, str]):
+    def _save_interaction(self, role: str, content: str) -> Dict[str, str]:
         """Save the interaction to the database."""
+        assert self.session_id is not None, "Session ID is not set."
+        assert self.conn is not None, "Database connection is not set."
+        interaction = {"role": role, "content": content}
         interaction_id = len(self.messages)
-        role = interaction["role"]
-        content = interaction["content"]
         self.cursor.execute(
             "INSERT INTO interactions (session_id, interaction_id, role, content) VALUES (?, ?, ?, ?)",
             (self.session_id, interaction_id, role, content),
         )
         self.conn.commit()
         self.messages.append(interaction)
+        return interaction
 
     def _load_previous_interactions(self):
         """Load the previous interactions from the database."""
@@ -312,7 +283,7 @@ class AutomataAgent:
 
     def _build_tool_message(self):
         """Builds a message containing all tools and their descriptions."""
-        return "".join(
+        return "Tools:\n" + "".join(
             [
                 f"\n{tool.name}: {tool.description}\n"
                 for toolkit in self.llm_toolkits.values()
@@ -322,26 +293,27 @@ class AutomataAgent:
 
     def _parse_completion_message(self, completion_message: str) -> str:
         """Parse the completion message and replace the tool outputs."""
-        tool_outputs = {}
+        outputs = {}
         for message in self.messages:
             pattern = r"-\s(tool_output_\d+)\s+-\s(.*?)(?=-\s(tool_output_\d+)|$)"
             matches = re.finditer(pattern, message["content"], re.DOTALL)
             for match in matches:
                 tool_name, tool_output = match.group(1), match.group(2).strip()
-                tool_outputs[tool_name] = tool_output
-        for tool_name in tool_outputs:
+                outputs[tool_name] = tool_output
+
+        for output_name in outputs:
             completion_message = completion_message.replace(
-                f"{{{tool_name}}}", tool_outputs[tool_name]
+                f"{{{output_name}}}", outputs[output_name]
             )
         return completion_message
 
     def _build_initial_messages(self, formatters: Dict[str, str]) -> List[Dict[str, str]]:
+        """Build the initial messages."""
         assert "user_input_instructions" in formatters
-        formatters["initializer_dummy_tool"] = AutomataAgent.INITIALIZER_DUMMY_TOOL
+        formatters["initializer_dummy_tool"] = AutomataAgent.INITIALIZER_DUMMY
 
         messages_config = load_yaml_config(
-            ConfigCategory.INSTRUCTION.value,
-            InstructionConfigVersion.AGENT_INTRODUCTION_PROD.value,
+            ConfigCategory.INSTRUCTION.value, self.instruction_version
         )
         initial_messages = messages_config["initial_messages"]
 
@@ -351,3 +323,116 @@ class AutomataAgent:
             input_messages.append({"role": message["role"], "content": input_message})
 
         return input_messages
+
+    def _stream_message(self, response_summary: Any):
+        """Stream the response message."""
+        print(colored("\n>>>", "green", attrs=["blink"]) + colored(" Agent:", "green"))
+        latest_accumulation = ""
+        stream_separator = " "
+        response_text = ""
+        for chunk in response_summary:
+            if "content" in chunk["choices"][0]["delta"]:
+                chunk_content = chunk["choices"][0]["delta"]["content"]
+                latest_accumulation += chunk_content
+                response_text += chunk_content
+            if stream_separator in latest_accumulation:
+                words = latest_accumulation.split(stream_separator)
+                for word in words[:-1]:
+                    print(colored(str(word), "green"), end=" ", flush=True)
+                latest_accumulation = words[-1]
+        print(colored(str(latest_accumulation), "green"))
+        return response_text
+
+
+class MasterAutomataAgent(AutomataAgent):
+    """A master automata agent that works with the coordinater to manipulate other automata agents."""
+
+    def __init__(self, agent_config, *args, **kwargs):
+        """Initialize the master automata agent."""
+        super().__init__(agent_config, *args, **kwargs)
+        self.coordinator = None
+        self.is_master_agent = True
+
+    def _setup(self, *args, **kwargs):
+        super()._setup(*args, **kwargs)
+        # Add your custom setup logic for the MasterAutomataAgent here
+
+    def set_coordinator(self, coordinator: "AgentCoordinator"):
+        """Set the coordinator."""
+        self.coordinator = coordinator
+
+    def _generate_observations(self, response_text: str) -> Dict[str, str]:
+        """Process the messages in the conversation."""
+        outputs = super()._generate_observations(response_text)
+        actions = ActionExtractor.extract_actions(response_text)
+
+        for agent_action in actions:
+            if isinstance(agent_action, AgentAction):
+                if agent_action.agent_name == AutomataAgent.INITIALIZER_DUMMY:
+                    continue
+                agent_output = self._execute_agent(agent_action)
+                query_name = agent_action.agent_query.replace("query", "output")
+                print("query_name = %s" % (query_name))
+                outputs[query_name] = agent_output
+                print("-" * 100)
+                print("self._execute_agent produced results = %s" % (agent_output))
+                print("-" * 100)
+
+                # agent_observations = self._generate_observations(agent_results)
+                # self._add_agent_observations(outputs, agent_observations, agent_action)
+        return outputs
+
+    def _execute_agent(self, agent_action) -> str:
+        """Generate the agent result."""
+        return self.coordinator.run_agent(agent_action)
+
+    def _add_agent_observations(
+        self,
+        observations: Dict[str, str],
+        agent_observations: Dict[str, str],
+        agent_action: AgentAction,
+    ) -> None:
+        """Generate the agent observations."""
+        for observation in agent_observations:
+            agent_observation = observation.replace(
+                "return_result_0", agent_action.agent_query.replace("query", "output")
+            )
+            observations[agent_observation] = agent_observations[observation]
+
+    def _parse_completion_message(self, completion_message: str) -> str:
+        """Parse the completion message and replace the tool outputs."""
+        completion_message = super()._parse_completion_message(completion_message)
+        outputs = {}
+        for message in self.messages:
+            pattern = r"-\s(agent_output_\d+)\s+-\s(.*?)(?=-\s(agent_output_\d+)|$)"
+            matches = re.finditer(pattern, message["content"], re.DOTALL)
+            for match in matches:
+                agent_name, agent_output = match.group(1), match.group(2).strip()
+                outputs[agent_name] = agent_output
+
+        for output_name in outputs:
+            completion_message = completion_message.replace(
+                f"{{{output_name}}}", outputs[output_name]
+            )
+        return completion_message
+
+    # TODO - Can we implement this more cleanly?
+    @classmethod
+    def from_agent(cls, agent: AutomataAgent) -> "MasterAutomataAgent":
+        """Create a master automata agent from an automata agent."""
+        master_agent = cls(None)
+        master_agent.llm_toolkits = agent.llm_toolkits
+        master_agent.instructions = agent.instructions
+        master_agent.model = agent.model
+        master_agent.initial_payload = agent.initial_payload
+        master_agent.config_version = agent.config_version
+        master_agent.system_instruction_template = agent.system_instruction_template
+        master_agent.instruction_input_variables = agent.instruction_input_variables
+        master_agent.stream = agent.stream
+        master_agent.verbose = agent.verbose
+        master_agent.max_iters = agent.max_iters
+        master_agent.temperature = agent.temperature
+        master_agent.session_id = agent.session_id
+        master_agent.completed = False
+        master_agent._setup()
+        return master_agent

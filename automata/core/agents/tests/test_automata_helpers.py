@@ -22,9 +22,9 @@ def test_extract_actions_0():
     )
 
     result = ActionExtractor.extract_actions(input_text)
-    assert result[0]["tool_name"] == "automata-indexer-retrieve-code"
+    assert result[0].tool_name == "automata-indexer-retrieve-code"
     assert (
-        result[0]["tool_args"][0]
+        result[0].tool_args[0]
         == "Retrieve the raw code for the function 'run' from the Automata agent, including all necessary imports and docstrings."
     )
 
@@ -50,16 +50,16 @@ def test_extract_actions_1():
     )
 
     result = ActionExtractor.extract_actions(input_text)
-    assert result[0]["tool_name"] == "automata-indexer-retrieve-code"
+    assert result[0].tool_name == "automata-indexer-retrieve-code"
     assert (
-        result[0]["tool_args"][0]
+        result[0].tool_args[0]
         == "Retrieve the raw code for the function 'run' from the Automata agent, including all necessary imports and docstrings."
     )
 
-    assert result[1]["tool_name"] == "automata-writer-modify-module"
-    assert result[1]["tool_args"][0] == "Modify the code in the Automata agent."
+    assert result[1].tool_name == "automata-writer-modify-module"
+    assert result[1].tool_args[0] == "Modify the code in the Automata agent."
 
-    assert result[1]["tool_args"][1] == "A dummy input...."
+    assert result[1].tool_args[1] == "A dummy input...."
 
 
 def test_extract_actions_2():
@@ -87,16 +87,16 @@ def test_extract_actions_2():
     )
 
     result = ActionExtractor.extract_actions(input_text)
-    assert result[0]["tool_name"] == "automata-indexer-retrieve-code"
+    assert result[0].tool_name == "automata-indexer-retrieve-code"
     assert (
-        result[0]["tool_args"][0]
+        result[0].tool_args[0]
         == "Retrieve the raw code for the function 'run' from the Automata agent, including all necessary imports and docstrings."
     )
 
-    assert result[1]["tool_name"] == "automata-writer-modify-module"
-    assert result[1]["tool_args"][0] == "Modify the code in the Automata agent."
+    assert result[1].tool_name == "automata-writer-modify-module"
+    assert result[1].tool_args[0] == "Modify the code in the Automata agent."
 
-    assert result[1]["tool_args"][1] == "def f(x: int) -> int:\n    return 0\n"
+    assert result[1].tool_args[1] == "def f(x: int) -> int:\n    return 0\n"
 
 
 def test_extract_actions_3():
@@ -114,9 +114,9 @@ def test_extract_actions_3():
     extractor = ActionExtractor()
     result = extractor.extract_actions(text)
 
-    assert result[0]["tool_name"] == "return_result_0"
+    assert result[0].result_name == "return_result_0"
     assert (
-        result[0]["tool_args"][0]
+        result[0].result_outputs[0]
         == "Function 'run' has been added to core.tests.sample_code.test."
     )
 
@@ -140,16 +140,15 @@ def test_extract_actions_4():
     )
 
     extractor = ActionExtractor()
-    result = extractor.extract_actions(text)
-    assert result[0]["tool_name"] == "automata-indexer-retrieve-code"
+    results = extractor.extract_actions(text)
+    assert results[0].tool_name == "automata-indexer-retrieve-code"
     assert (
-        result[0]["tool_args"][0]
+        results[0].tool_args[0]
         == "Retrieve the raw code for the function 'run' from the Automata agent, including all necessary imports and docstrings."
     )
-
-    assert result[1]["tool_name"] == "return_result_0"
+    assert results[1].result_name == "return_result_0"
     assert (
-        result[1]["tool_args"][0]
+        results[1].result_outputs[0]
         == "Function 'run' has been added to core.tests.sample_code.test."
     )
 
@@ -213,29 +212,29 @@ def test_extract_actions_6(automata_agent):
     assert user_observation_message.strip() == expected_observations.strip()
 
 
-def test_extract_actions_7(automata_agent):
+def test_extract_actions_7():
     text = textwrap.dedent(
         """
         - thoughts
-        - I can retrieve this information directly with the python indexer.
+            - I can retrieve this information directly with the python indexer.
         - actions
-        - tool_query_0
-            - tool_name
-                - python-indexer-retrieve-docstring
-            - tool_args
-                - core.utils
-                - calculate_similarity
-        - tool_query_1
-            - tool_name
-                - python-indexer-retrieve-code
-            - tool_args
-                - core.utils
-                - calculate_similarity
+            - tool_query_0
+                - tool_name
+                    - python-indexer-retrieve-docstring
+                - tool_args
+                    - core.utils
+                    - calculate_similarity
+            - tool_query_1
+                - tool_name
+                    - python-indexer-retrieve-code
+                - tool_args
+                    - core.utils
+                    - calculate_similarity
         """
     )
     actions = ActionExtractor.extract_actions(text)
-    assert actions[0]["tool_name"] == "python-indexer-retrieve-docstring"
-    assert actions[0]["tool_args"] == ["core.utils", "calculate_similarity"]
+    assert actions[0].tool_name == "python-indexer-retrieve-docstring"
+    assert actions[0].tool_args == ["core.utils", "calculate_similarity"]
 
-    assert actions[1]["tool_name"] == "python-indexer-retrieve-code"
-    assert actions[1]["tool_args"] == ["core.utils", "calculate_similarity"]
+    assert actions[1].tool_name == "python-indexer-retrieve-code"
+    assert actions[1].tool_args == ["core.utils", "calculate_similarity"]

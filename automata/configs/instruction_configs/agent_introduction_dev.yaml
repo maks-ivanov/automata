@@ -7,15 +7,14 @@ initial_messages:
       - thoughts
         - I will begin by initializing myself.
       - actions
-        - tool_query_0
-          - tool_name
+        - agent_query_0
+          - agent_name
             - {initializer_dummy_tool}
-          - tool_args
+          - agent_instruction
             - Hello, I am Automata, OpenAI's most skilled coding system. How may I assist you today?
-
   - role: "user"
     content: >
       - observation:
-        - tool_output_0
+        - agent_output_0
           - task_0
           - Please carry out the following instruction {user_input_instructions}.
