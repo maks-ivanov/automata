@@ -100,7 +100,6 @@ def main():
     logger.info("-" * 60)
 
     coordinator = AgentCoordinator()
-
     agent_configs = {
         config_name.replace("_dev", "").replace("_prod", ""): AutomataAgentConfig.load(
             AgentConfigVersion(config_name)
@@ -109,7 +108,7 @@ def main():
     }
     for config_name in agent_configs.keys():
         config = agent_configs[config_name]
-        print(
+        logger.info(
             f"Adding Agent with name={config_name}, config={config}, description={config.description}"
         )
         agent = AgentInstance(name=config_name, config=config, description=config.description)
@@ -146,7 +145,7 @@ def main():
     master_agent.set_coordinator(coordinator)
 
     result = master_agent.run()
-    print(f"The result is:\n\n{result}")
+    logger.info(f"The result is:\n\n{result}")
 
 
 if __name__ == "__main__":
