@@ -17,13 +17,11 @@ class AgentInstance(BaseModel):
     llm_toolkits: Optional[Dict[ToolkitType, Toolkit]] = None
 
     def run(self, instructions: str):
-        print("Running...")
+        """Runs the agent with the given instructions."""
         agent = self.builder(config=self.config)
         if self.llm_toolkits:
             agent = agent.with_llm_toolkits(self.llm_toolkits)
-        print("Starting an agent with instructions = %s" % (instructions))
-        agent = agent.with_instructions(instructions).build()
-        result = agent.run()
+        result = agent.with_instructions(instructions).run()
         del agent
         return result
 
@@ -36,12 +34,14 @@ class AgentCoordinator:
         self.agent_instances: List[AgentInstance] = []
 
     def add_agent_instance(self, agent_instance):
+        """Adds an agent instance."""
         # Check agent has not already been added via name field
         if agent_instance.name in [ele.name for ele in self.agent_instances]:
             raise ValueError("Agent already exists.")
         self.agent_instances.append(agent_instance)
 
     def remove_agent_instance(self, agent_name):
+        """Removes an agent instance by name."""
         # Check agent has already been added via name field
         if agent_name not in [ele.name for ele in self.agent_instances]:
             raise ValueError("Agent does not exist.")
@@ -50,19 +50,15 @@ class AgentCoordinator:
         ]
 
     def set_master_agent(self, master_agent: MasterAutomataAgent):
+        """Sets the master agent."""
         self.master_agent = master_agent
 
     def run_agent(self, action: AgentAction) -> str:
+        """Runs the selected agent and returns the result."""
         # Run the selected agent and return the result
         try:
             agent_instance = self._select_agent_instance(action.agent_name)
-            print(
-                f"Calling run_agent with action.agent_name={action.agent_name}, action.agent_instruction={action.agent_instruction}"
-            )
             output = agent_instance.run("\n".join(action.agent_instruction))
-            print("-" * 100)
-            print("Found output = %s" % (output))
-            print("-" * 100)
             return output
         except Exception as e:
             return str("Execution fail with error: " + str(e))

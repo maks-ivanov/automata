@@ -201,6 +201,7 @@ class ActionExtractor:
 
     @staticmethod
     def _is_return_result_action(line: str) -> bool:
+        """Check if the current line is a new return result action."""
         return line.strip().startswith(
             f"{ActionExtractor.ACTION_INDICATOR}{ActionExtractor.RETURN_RESULT_INDICATOR}"
         )

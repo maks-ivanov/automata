@@ -143,6 +143,7 @@ def test_iter_task_with_parsed_completion_message(
     automata_agent.iter_task()
     completion_message = automata_agent.messages[-1]["content"]
     stripped_completion_message = [ele.strip() for ele in completion_message.split("\n")]
+    print("stripped_completion_message = ", stripped_completion_message)
     assert stripped_completion_message[0] == "task_0"
     assert (
         stripped_completion_message[1]
@@ -180,6 +181,28 @@ def test_iter_task_with_parsed_completion_message_2(
     api_response,
     automata_agent_builder,
 ):
+    automata_agent = automata_agent_builder.with_instruction_version(
+        "agent_introduction_dev"
+    ).build()
+
+    # Mock the API response
+    mock_openai_chatcompletion_create.return_value = api_response
+    automata_agent.iter_task()
+
+    completion_message = automata_agent.messages[-1]["content"]
+    stripped_completion_message = [ele.strip() for ele in completion_message.split("\n")]
+    assert stripped_completion_message[0] == "{agent_query_0}"
+
+
+@pytest.mark.parametrize(
+    "api_response", [mock_openai_response_with_completion_agent_message_to_parse()]
+)
+@patch("openai.ChatCompletion.create")
+def test_iter_task_with_parsed_completion_message_2_master(
+    mock_openai_chatcompletion_create,
+    api_response,
+    automata_agent_builder,
+):
     automata_agent = MasterAutomataAgent.from_agent(
         automata_agent_builder.with_instruction_version("agent_introduction_dev").build()
     )
@@ -187,6 +210,8 @@ def test_iter_task_with_parsed_completion_message_2(
     # Mock the API response
     mock_openai_chatcompletion_create.return_value = api_response
     automata_agent.iter_task()
+
     completion_message = automata_agent.messages[-1]["content"]
     stripped_completion_message = [ele.strip() for ele in completion_message.split("\n")]
+    print("stripped_completion_message = ", stripped_completion_message)
     assert stripped_completion_message[0] == "{agent_query_0}"

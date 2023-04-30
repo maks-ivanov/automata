@@ -98,6 +98,7 @@ class AutomataAgent(Agent):
         self.session_id = config.session_id
         self.instruction_version = config.instruction_version
         self.completed = False
+        self.is_master_agent = False
         self.latest_observations: Dict[str, str] = {}
         self.conn: Optional[sqlite3.Connection] = None
 
@@ -118,7 +119,6 @@ class AutomataAgent(Agent):
         return self.messages[-1]["content"]
 
     def iter_task(self) -> Optional[Tuple[Dict[str, str], Dict[str, str]]]:
-        print("messages = ", self.messages)
         """Run the test and report the tool outputs back to the master."""
         if self.completed:
             raise ValueError("Cannot run an agent that has already completed.")
@@ -134,18 +134,17 @@ class AutomataAgent(Agent):
             if self.stream
             else response_summary["choices"][0]["message"]["content"]
         )
-
-        assistant_message = self._save_interaction("assistant", response_text)
-
         observations = self._generate_observations(response_text)
         completion_message = retrieve_completion_message(observations)
-
-        if completion_message:
+        if completion_message is not None:
             self.completed = True
-            completion_message = self._parse_completion_message(completion_message)
-            self._save_interaction("assistant", completion_message)
+            self._save_interaction(
+                "assistant",
+                self._parse_completion_message(completion_message),
+            )
             return None
 
+        assistant_message = self._save_interaction("assistant", response_text)
         user_message = self._save_interaction(
             "user",
             generate_user_observation_message(observations)
@@ -184,9 +183,7 @@ class AutomataAgent(Agent):
         self.tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
         if "tools" in self.instruction_input_variables:
             self.initial_payload["tools"] = self._build_tool_message()
-        print("Initial Payload:\n", self.initial_payload)
         system_instruction = format_config(self.initial_payload, self.system_instruction_template)
-        print("AFTER FORMAT:\n\nSystem Instruction:\n\n", system_instruction)
         self._init_database()
         if self.session_id:
             self._load_previous_interactions()
@@ -207,9 +204,8 @@ class AutomataAgent(Agent):
 
     def _generate_observations(self, response_text: str) -> Dict[str, str]:
         """Process the messages in the conversation."""
-        actions = ActionExtractor.extract_actions(response_text)
-        logger.debug("Actions: %s" % actions)
         outputs = {}
+        actions = ActionExtractor.extract_actions(response_text)
         for action in actions:
             if isinstance(action, ToolAction):
                 (tool_query, tool_name, tool_input) = (
@@ -264,9 +260,9 @@ class AutomataAgent(Agent):
         self.conn.commit()
 
     def _save_interaction(self, role: str, content: str) -> Dict[str, str]:
+        """Save the interaction to the database."""
         assert self.session_id is not None, "Session ID is not set."
         assert self.conn is not None, "Database connection is not set."
-        """Save the interaction to the database."""
         interaction = {"role": role, "content": content}
         interaction_id = len(self.messages)
         self.cursor.execute(
@@ -314,6 +310,7 @@ class AutomataAgent(Agent):
         return completion_message
 
     def _build_initial_messages(self, formatters: Dict[str, str]) -> List[Dict[str, str]]:
+        """Build the initial messages."""
         assert "user_input_instructions" in formatters
         formatters["initializer_dummy_tool"] = AutomataAgent.INITIALIZER_DUMMY
 
@@ -330,6 +327,7 @@ class AutomataAgent(Agent):
         return input_messages
 
     def _stream_message(self, response_summary: Any):
+        """Stream the response message."""
         print(colored("\n>>>", "green", attrs=["blink"]) + colored(" Agent:", "green"))
         latest_accumulation = ""
         stream_separator = " "
@@ -355,6 +353,7 @@ class MasterAutomataAgent(AutomataAgent):
         """Initialize the master automata agent."""
         super().__init__(agent_config, *args, **kwargs)
         self.coordinator = None
+        self.is_master_agent = True
 
     def _setup(self, *args, **kwargs):
         super()._setup(*args, **kwargs)
@@ -364,38 +363,25 @@ class MasterAutomataAgent(AutomataAgent):
         """Set the coordinator."""
         self.coordinator = coordinator
 
-    def iter_task(self) -> Optional[Tuple[Dict[str, str], Dict[str, str]]]:
-        result = super().iter_task()
+    def _generate_observations(self, response_text: str) -> Dict[str, str]:
+        """Process the messages in the conversation."""
+        outputs = super()._generate_observations(response_text)
+        actions = ActionExtractor.extract_actions(response_text)
 
-        lookback_index = -2 if not self.completed else -3
-        latest_message = self.messages[lookback_index + 1]
-
-        actions = ActionExtractor.extract_actions(self.messages[lookback_index]["content"])
-        observations: Dict[str, str] = {}
         for agent_action in actions:
             if isinstance(agent_action, AgentAction):
                 if agent_action.agent_name == AutomataAgent.INITIALIZER_DUMMY:
                     continue
                 agent_results = self._execute_agent(agent_action)
                 agent_observations = self._generate_observations(agent_results)
-                self._add_agent_observation(observations, agent_observations, agent_action)
-        if len(self.latest_observations) > 0:
-            latest_message["content"] += generate_user_observation_message(
-                observations, include_prefix=False
-            )
-        else:
-            latest_message["content"] = generate_user_observation_message(
-                observations, include_prefix=True
-            )
-        if self.completed:
-            self._parse_completion_message(latest_message["content"])
-        return result
+                self._add_agent_observations(outputs, agent_observations, agent_action)
+        return outputs
 
     def _execute_agent(self, agent_action) -> str:
         """Generate the agent result."""
         return self.coordinator.run_agent(agent_action)
 
-    def _add_agent_observation(
+    def _add_agent_observations(
         self,
         observations: Dict[str, str],
         agent_observations: Dict[str, str],
@@ -410,8 +396,7 @@ class MasterAutomataAgent(AutomataAgent):
 
     def _parse_completion_message(self, completion_message: str) -> str:
         """Parse the completion message and replace the tool outputs."""
-        super()._parse_completion_message(completion_message)
-
+        completion_message = super()._parse_completion_message(completion_message)
         outputs = {}
         for message in self.messages:
             pattern = r"-\s(agent_output_\d+)\s+-\s(.*?)(?=-\s(agent_output_\d+)|$)"
