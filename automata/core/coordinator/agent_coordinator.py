@@ -1,10 +1,10 @@
-from typing import Dict, List, Optional
+# TODO - Add a type for the builder
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel
 
 from automata.configs.config_types import AutomataAgentConfig
 from automata.core.agents.automata_agent import MasterAutomataAgent
-from automata.core.agents.automata_agent_builder import AutomataAgentBuilder
 from automata.core.agents.automata_agent_helpers import AgentAction
 from automata.core.base.tool import Toolkit, ToolkitType
 
@@ -13,13 +13,15 @@ class AgentInstance(BaseModel):
     name: str = ""
     description: str = ""
     config: AutomataAgentConfig = AutomataAgentConfig()
-    builder: AutomataAgentBuilder = AutomataAgentBuilder(config=config)
+    builder: Any
     llm_toolkits: Optional[Dict[ToolkitType, Toolkit]] = None
 
-    def run(self, instructions):
+    def run(self, instructions: str):
+        print("Running...")
         agent = self.builder(config=self.config)
         if self.llm_toolkits:
             agent = agent.with_llm_toolkits(self.llm_toolkits)
+        print("Starting an agent with instructions = %s" % (instructions))
         agent = agent.with_instructions(instructions).build()
         result = agent.run()
         del agent
@@ -54,7 +56,14 @@ class AgentCoordinator:
         # Run the selected agent and return the result
         try:
             agent_instance = self._select_agent_instance(action.agent_name)
-            return agent_instance.run(action.agent_instruction)
+            print(
+                f"Calling run_agent with action.agent_name={action.agent_name}, action.agent_instruction={action.agent_instruction}"
+            )
+            output = agent_instance.run("\n".join(action.agent_instruction))
+            print("-" * 100)
+            print("Found output = %s" % (output))
+            print("-" * 100)
+            return output
         except Exception as e:
             return str("Execution fail with error: " + str(e))
 

@@ -33,7 +33,7 @@ import logging
 import re
 import sqlite3
 import uuid
-from typing import TYPE_CHECKING, Dict, Final, List, Optional, Tuple, cast
+from typing import TYPE_CHECKING, Any, Dict, Final, List, Optional, Tuple, cast
 
 import openai
 from termcolor import colored
@@ -118,74 +118,42 @@ class AutomataAgent(Agent):
         return self.messages[-1]["content"]
 
     def iter_task(self) -> Optional[Tuple[Dict[str, str], Dict[str, str]]]:
+        print("messages = ", self.messages)
         """Run the test and report the tool outputs back to the master."""
         if self.completed:
             raise ValueError("Cannot run an agent that has already completed.")
-        context_length = sum(
-            [
-                len(
-                    self.tokenizer.encode(message["content"], max_length=1024 * 8, truncation=True)
-                )
-                for message in self.messages
-            ]
-        )
-        logger.debug("Chat Context length: %s", context_length)
-        logger.debug("-" * 60)
-        logger.info("Running instruction...")
+
         response_summary = openai.ChatCompletion.create(
             model=self.model,
             messages=self.messages,
             temperature=self.temperature,
             stream=self.stream,
         )
-        if self.stream:
-            print(colored("\n>>>", "green", attrs=["blink"]) + colored(" Agent:", "green"))
-            latest_accumulation = ""
-            stream_separator = " "
-            response_text = ""
-            for chunk in response_summary:
-                if "content" in chunk["choices"][0]["delta"]:
-                    chunk_content = chunk["choices"][0]["delta"]["content"]
-                    latest_accumulation += chunk_content
-                    response_text += chunk_content
-                if stream_separator in latest_accumulation:
-                    words = latest_accumulation.split(stream_separator)
-                    for word in words[:-1]:
-                        print(colored(str(word), "green"), end=" ", flush=True)
-                    latest_accumulation = words[-1]
-            print(colored(str(latest_accumulation), "green"))
-        else:
-            response_text = response_summary["choices"][0]["message"]["content"]
-        logger.debug("OpenAI Response:\n%s\n" % response_text)
-        assistant_message = {"role": "assistant", "content": response_text}
+        response_text = (
+            self._stream_message(response_summary)
+            if self.stream
+            else response_summary["choices"][0]["message"]["content"]
+        )
 
-        responses: List[Dict[str, str]] = []
-        responses.append(assistant_message)
+        assistant_message = self._save_interaction("assistant", response_text)
 
         observations = self._generate_observations(response_text)
         completion_message = retrieve_completion_message(observations)
 
         if completion_message:
             self.completed = True
-            self._save_interaction(
-                {
-                    "role": "assistant",
-                    "content": self._parse_completion_message(completion_message),
-                }
-            )
+            completion_message = self._parse_completion_message(completion_message)
+            self._save_interaction("assistant", completion_message)
             return None
 
-        self._save_interaction(assistant_message)
+        user_message = self._save_interaction(
+            "user",
+            generate_user_observation_message(observations)
+            if len(observations) > 0
+            else AutomataAgent.CONTINUE_MESSAGE,
+        )
+
         self.latest_observations = observations
-        if len(observations) > 0:
-            user_observation_message = generate_user_observation_message(observations)
-            user_message = {"role": "user", "content": user_observation_message}
-            logger.debug("Synthetic User Message:\n%s\n" % user_observation_message)
-        else:
-            user_message = {"role": "user", "content": AutomataAgent.CONTINUE_MESSAGE}
-            logger.debug("Synthetic User Message:\n%s\n" % AutomataAgent.CONTINUE_MESSAGE)
-        responses.append(user_message)
-        self._save_interaction(user_message)
         return (assistant_message, user_message)
 
     def replay_messages(self) -> str:
@@ -216,19 +184,20 @@ class AutomataAgent(Agent):
         self.tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
         if "tools" in self.instruction_input_variables:
             self.initial_payload["tools"] = self._build_tool_message()
-
+        print("Initial Payload:\n", self.initial_payload)
         system_instruction = format_config(self.initial_payload, self.system_instruction_template)
+        print("AFTER FORMAT:\n\nSystem Instruction:\n\n", system_instruction)
         self._init_database()
         if self.session_id:
             self._load_previous_interactions()
         else:
             self.session_id = str(uuid.uuid4())
-            self._save_interaction({"role": "system", "content": system_instruction})
+            self._save_interaction("system", system_instruction)
             initial_messages = self._build_initial_messages(
                 {"user_input_instructions": self.instructions}
             )
             for message in initial_messages:
-                self._save_interaction(message)
+                self._save_interaction(message["role"], message["content"])
         logger.debug("Initializing with System Instruction:%s\n\n" % system_instruction)
         logger.debug("-" * 60)
         if set(self.instruction_input_variables) != set(list(self.initial_payload.keys())):
@@ -294,19 +263,19 @@ class AutomataAgent(Agent):
         )
         self.conn.commit()
 
-    def _save_interaction(self, interaction: Dict[str, str]):
+    def _save_interaction(self, role: str, content: str) -> Dict[str, str]:
         assert self.session_id is not None, "Session ID is not set."
         assert self.conn is not None, "Database connection is not set."
         """Save the interaction to the database."""
+        interaction = {"role": role, "content": content}
         interaction_id = len(self.messages)
-        role = interaction["role"]
-        content = interaction["content"]
         self.cursor.execute(
             "INSERT INTO interactions (session_id, interaction_id, role, content) VALUES (?, ?, ?, ?)",
             (self.session_id, interaction_id, role, content),
         )
         self.conn.commit()
         self.messages.append(interaction)
+        return interaction
 
     def _load_previous_interactions(self):
         """Load the previous interactions from the database."""
@@ -360,6 +329,24 @@ class AutomataAgent(Agent):
 
         return input_messages
 
+    def _stream_message(self, response_summary: Any):
+        print(colored("\n>>>", "green", attrs=["blink"]) + colored(" Agent:", "green"))
+        latest_accumulation = ""
+        stream_separator = " "
+        response_text = ""
+        for chunk in response_summary:
+            if "content" in chunk["choices"][0]["delta"]:
+                chunk_content = chunk["choices"][0]["delta"]["content"]
+                latest_accumulation += chunk_content
+                response_text += chunk_content
+            if stream_separator in latest_accumulation:
+                words = latest_accumulation.split(stream_separator)
+                for word in words[:-1]:
+                    print(colored(str(word), "green"), end=" ", flush=True)
+                latest_accumulation = words[-1]
+        print(colored(str(latest_accumulation), "green"))
+        return response_text
+
 
 class MasterAutomataAgent(AutomataAgent):
     """A master automata agent that works with the coordinater to manipulate other automata agents."""
@@ -381,7 +368,6 @@ class MasterAutomataAgent(AutomataAgent):
         result = super().iter_task()
 
         lookback_index = -2 if not self.completed else -3
-
         latest_message = self.messages[lookback_index + 1]
 
         actions = ActionExtractor.extract_actions(self.messages[lookback_index]["content"])
@@ -402,14 +388,12 @@ class MasterAutomataAgent(AutomataAgent):
                 observations, include_prefix=True
             )
         if self.completed:
-            self._parse_completion_message(latest_message)
-
+            self._parse_completion_message(latest_message["content"])
         return result
 
     def _execute_agent(self, agent_action) -> str:
         """Generate the agent result."""
-        self.coordinator.run_agent(agent_action)
-        return ""
+        return self.coordinator.run_agent(agent_action)
 
     def _add_agent_observation(
         self,

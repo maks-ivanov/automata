@@ -40,8 +40,7 @@ def test_init_database(automata_agent):
 
 def test_save_and_load_interaction(automata_agent):
     automata_agent._init_database()
-    message = {"role": "assistant", "content": "Test message."}
-    automata_agent._save_interaction(message)
+    automata_agent._save_interaction("assistant", "Test message.")
     # Add assertions to check if the message is saved correctly.
     automata_agent.messages = {}
     automata_agent._load_previous_interactions()

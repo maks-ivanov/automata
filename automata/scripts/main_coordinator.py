@@ -61,6 +61,12 @@ def main():
         default=f"{AgentConfigVersion.AUTOMATA_INDEXER_DEV.value},{AgentConfigVersion.AUTOMATA_WRITER_DEV.value}",
         help="Should the instruction prompt include an overview?",
     )
+    parser.add_argument(
+        "--instruction_version",
+        type=str,
+        default="agent_introduction_dev",
+        help="The instruction version.",
+    )
     parser.add_argument("-v", "--verbose", action="store_true", help="increase output verbosity")
 
     args = parser.parse_args()
@@ -132,6 +138,7 @@ def main():
         .with_model(args.model)
         .with_session_id(args.session_id)
         .with_stream(args.stream)
+        .with_instruction_version(args.instruction_version)
         .build()
     )
 

@@ -72,6 +72,8 @@ class AutomataAgentConfig(BaseModel):
 
     @classmethod
     def load(cls, config_version: AgentConfigVersion) -> "AutomataAgentConfig":
+        from automata.tool_management.tool_management_utils import build_llm_toolkits
+
         if config_version == AgentConfigVersion.DEFAULT:
             return AutomataAgentConfig()
         file_dir_path = os.path.dirname(os.path.abspath(__file__))
@@ -80,4 +82,20 @@ class AutomataAgentConfig(BaseModel):
         )
         with open(config_abs_path, "r") as file:
             loaded_yaml = yaml.safe_load(file)
-            return AutomataAgentConfig(**loaded_yaml)
+            print("Loading with loaded_yaml = ", loaded_yaml)
+            if "tools" in loaded_yaml:
+                tools = loaded_yaml["tools"].split(",")
+                loaded_yaml["llm_toolkits"] = build_llm_toolkits(tools)
+                # loaded_yaml["instruction_input_variables"] = tools
+                print("loaded_yaml = ", loaded_yaml)
+
+        config = AutomataAgentConfig(**loaded_yaml)
+
+        if "overview" in config.instruction_input_variables:
+            from automata.core.utils import root_py_path
+            from automata.tools.python_tools.python_indexer import PythonIndexer
+
+            indexer = PythonIndexer(root_py_path())
+            config.initial_payload["overview"] = indexer.get_overview()
+
+        return config

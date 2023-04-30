@@ -16,7 +16,7 @@ system_instruction_template: >
         - agent_query_0
           - agent_name
             - automata_initializer
-          - agent_args
+          - agent_instruction
             - Hello, I am Automata, OpenAI's most skilled coding system. How may I assist you today?
 
       *User*
@@ -44,7 +44,7 @@ system_instruction_template: >
         - agent_query_1
           - agent_name 
             - automata_indexer
-          - agent_args
+          - agent_instruction
             - Provide an example that correctly initializes an AutomataAgent and a PythonIndexer, including all necessary imports, docstrings, and add relevant comments.
 
     *User*
@@ -68,7 +68,7 @@ system_instruction_template: >
         - agent_query_2
           - agent_name
             - automata_writer
-          - agent_args
+          - agent_instruction
             - Modify PythonIndexerToolManager.build_tools_with_automata to read 
               ```
               from automata.core.agents.automata_agent import AutomataAgent
@@ -112,7 +112,7 @@ system_instruction_template: >
         - agent_query_1
           - agent_name
             - automata_indexer
-          - agent_args
+          - agent_instruction
             - Retrieve the code for the function 'run' from AutomataAgent, including all necessary imports and docstrings.
 
     *User*
@@ -131,7 +131,7 @@ system_instruction_template: >
         - agent_query_2
           - agent_name
             - automata_writer
-          - agent_args
+          - agent_instruction
             - Modify core.tests.sample_code.test to include the function below
               ```
               def run(self, input_str: str) -> str:

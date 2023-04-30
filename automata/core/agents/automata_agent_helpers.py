@@ -141,6 +141,12 @@ class ActionExtractor:
                 (is_code, skip_lines) = cls._process_action_input(
                     index, line, lines, action, is_code, skip_lines
                 )
+        for action in actions:
+            if isinstance(action, AgentAction):
+                print(action.agent_name)
+                print(action.agent_query)
+                print(action.agent_instruction)
+
         return actions
 
     @staticmethod
