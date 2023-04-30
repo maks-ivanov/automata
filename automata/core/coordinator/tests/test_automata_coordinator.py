@@ -34,7 +34,7 @@ class MockAgentInstance(AgentInstance):
 @pytest.fixture
 def coordinator_with_mock_agent():
     coordinator = AgentCoordinator()
-    agent_builder = AutomataAgentBuilder(config=None)
+    agent_builder = AutomataAgentBuilder
     mock_agent_instance = MockAgentInstance(
         name="mock_agent", description="Mock agent for testing.", builder=agent_builder
     )
@@ -47,7 +47,7 @@ def test_initialize_coordinator(coordinator):
 
 
 def test_add_agent(coordinator):
-    agent_builder = AutomataAgentBuilder(config=None)
+    agent_builder = AutomataAgentBuilder
     agent_instance = AgentInstance(name="agent_0", builder=agent_builder)
 
     coordinator.add_agent_instance(agent_instance)
@@ -60,7 +60,7 @@ def test_set_coordinator_master(coordinator, master_agent):
 
 
 def test_cannot_add_agent_twice(coordinator):
-    agent_builder = AutomataAgentBuilder(config=None)
+    agent_builder = AutomataAgentBuilder
     agent_instance = AgentInstance(name="agent_0", builder=agent_builder)
 
     coordinator.add_agent_instance(agent_instance)
@@ -70,7 +70,7 @@ def test_cannot_add_agent_twice(coordinator):
 
 
 def test_remove_agent(coordinator):
-    agent_builder = AutomataAgentBuilder(config=None)
+    agent_builder = AutomataAgentBuilder
     agent_instance = AgentInstance(name="agent_0", builder=agent_builder)
 
     coordinator.add_agent_instance(agent_instance)
@@ -79,7 +79,7 @@ def test_remove_agent(coordinator):
 
 
 def test_cannot_remove_missing_agent(coordinator):
-    agent_builder = AutomataAgentBuilder(config=None)
+    agent_builder = AutomataAgentBuilder
     agent_instance = AgentInstance(name="agent_0", builder=agent_builder)
 
     coordinator.add_agent_instance(agent_instance)
@@ -88,7 +88,7 @@ def test_cannot_remove_missing_agent(coordinator):
 
 
 def test_add_agent_set_coordinator(coordinator, master_agent):
-    agent_builder = AutomataAgentBuilder(config=None)
+    agent_builder = AutomataAgentBuilder
     agent_instance = AgentInstance(name="agent_0", builder=agent_builder)
     coordinator.add_agent_instance(agent_instance)
 
@@ -101,7 +101,7 @@ def test_add_agent_set_coordinator(coordinator, master_agent):
 def test_build_agent_message(coordinator, master_agent):
     coordinator.set_master_agent(master_agent)
     master_agent.set_coordinator(coordinator)
-    agent_builder = AutomataAgentBuilder(config=None)
+    agent_builder = AutomataAgentBuilder
 
     agent_instance = AgentInstance(
         name="agent_0", builder=agent_builder, description="Test agent."
@@ -164,7 +164,6 @@ def test_iter_task_with_agent_query(
     master_agent.iter_task()
 
     completion_message = master_agent.messages[-1]["content"]
-    print("completion_message = ", completion_message)
     assert "- agent_output_0" in completion_message
     assert "- This is a mock return " in completion_message
 
@@ -220,7 +219,6 @@ def test_iter_task_with_agent_and_tool_query(
     master_agent.iter_task()
 
     completion_message = master_agent.messages[-1]["content"]
-    print("completion message = ", completion_message)
     assert "- tool_output_0" in completion_message
     assert "- tool_output_1" in completion_message
     assert "- agent_output_1" in completion_message
@@ -282,7 +280,6 @@ def test_iter_task_with_agent_and_tool_query_3(
     master_agent.iter_task()
 
     completion_message = master_agent.messages[-1]["content"]
-    print("completion message = ", completion_message)
     assert "- agent_output_1" in completion_message
     assert "- This is a mock return " in completion_message
 
@@ -295,9 +292,10 @@ def test_run_agent(coordinator_with_mock_agent, master_agent):
     action = AgentAction(
         agent_name="mock_agent",
         agent_query="mock_agent_query",
-        agent_instruction="Test instruction.",
+        agent_instruction=["Test instruction."],
     )
     result = coordinator.run_agent(action)
+    print("result = ", result)
     assert result == "Running Test instruction. on mock_agent."
 
 

@@ -37,7 +37,6 @@ from typing import TYPE_CHECKING, Any, Dict, Final, List, Optional, Tuple, cast
 
 import openai
 from termcolor import colored
-from transformers import GPT2Tokenizer
 
 from automata.config import CONVERSATION_DB_NAME, OPENAI_API_KEY
 from automata.configs.config_types import AutomataAgentConfig, ConfigCategory
@@ -180,7 +179,6 @@ class AutomataAgent(Agent):
         """Setup the agent."""
         openai.api_key = OPENAI_API_KEY
         self.messages = []
-        self.tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
         if "tools" in self.instruction_input_variables:
             self.initial_payload["tools"] = self._build_tool_message()
         system_instruction = format_config(self.initial_payload, self.system_instruction_template)
@@ -372,9 +370,16 @@ class MasterAutomataAgent(AutomataAgent):
             if isinstance(agent_action, AgentAction):
                 if agent_action.agent_name == AutomataAgent.INITIALIZER_DUMMY:
                     continue
-                agent_results = self._execute_agent(agent_action)
-                agent_observations = self._generate_observations(agent_results)
-                self._add_agent_observations(outputs, agent_observations, agent_action)
+                agent_output = self._execute_agent(agent_action)
+                query_name = agent_action.agent_query.replace("query", "output")
+                print("query_name = %s" % (query_name))
+                outputs[query_name] = agent_output
+                print("-" * 100)
+                print("self._execute_agent produced results = %s" % (agent_output))
+                print("-" * 100)
+
+                # agent_observations = self._generate_observations(agent_results)
+                # self._add_agent_observations(outputs, agent_observations, agent_action)
         return outputs
 
     def _execute_agent(self, agent_action) -> str:

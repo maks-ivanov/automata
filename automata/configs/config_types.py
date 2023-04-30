@@ -80,14 +80,12 @@ class AutomataAgentConfig(BaseModel):
         config_abs_path = os.path.join(
             file_dir_path, ConfigCategory.AGENT.value, f"{config_version.value}.yaml"
         )
+
         with open(config_abs_path, "r") as file:
             loaded_yaml = yaml.safe_load(file)
-            print("Loading with loaded_yaml = ", loaded_yaml)
             if "tools" in loaded_yaml:
                 tools = loaded_yaml["tools"].split(",")
                 loaded_yaml["llm_toolkits"] = build_llm_toolkits(tools)
-                # loaded_yaml["instruction_input_variables"] = tools
-                print("loaded_yaml = ", loaded_yaml)
 
         config = AutomataAgentConfig(**loaded_yaml)
 

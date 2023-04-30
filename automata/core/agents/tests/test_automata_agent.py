@@ -143,7 +143,6 @@ def test_iter_task_with_parsed_completion_message(
     automata_agent.iter_task()
     completion_message = automata_agent.messages[-1]["content"]
     stripped_completion_message = [ele.strip() for ele in completion_message.split("\n")]
-    print("stripped_completion_message = ", stripped_completion_message)
     assert stripped_completion_message[0] == "task_0"
     assert (
         stripped_completion_message[1]
@@ -213,5 +212,4 @@ def test_iter_task_with_parsed_completion_message_2_master(
 
     completion_message = automata_agent.messages[-1]["content"]
     stripped_completion_message = [ele.strip() for ele in completion_message.split("\n")]
-    print("stripped_completion_message = ", stripped_completion_message)
     assert stripped_completion_message[0] == "{agent_query_0}"

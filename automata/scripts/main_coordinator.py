@@ -145,39 +145,8 @@ def main():
     coordinator.set_master_agent(master_agent)
     master_agent.set_coordinator(coordinator)
 
-    master_agent.run()
-
-    # print("agent_configs =", agent_configs)
-    # import pdb
-
-    # pdb.set_trace()
-    # action = AgentAction(
-    #     agent_name="agent_0", agent_query="agent_query_0", agent_instruction=args.instructions
-    # )
-
-    # action = AgentAction(
-    #     agent_name="agent_0", agent_query="agent_query_0", agent_instruction=args.instructions
-    # )
-    # coordinator.run_agent(action)
-    # logger.info("Running the agent now...")
-    # if args.session_id is None:
-    #     result = agent.run()
-    #     logger.info("Result: %s", result)
-    # else:
-    #     logger.info("Replaying messages...")
-    #     result = agent.replay_messages()
-    #     logger.info("Result: %s", result)
-
-    # while True:
-    #     user_input = input(
-    #         "Do you have any further instructions or feedback? Type 'exit' to terminate: "
-    #     )
-    #     if user_input.lower() == "exit":
-    #         break
-    #     else:
-    #         instructions = [{"role": "user", "content": user_input}]
-    #         agent.modify_last_instruction(instructions)
-    #         agent.iter_task()
+    result = master_agent.run()
+    print(f"The result is:\n\n{result}")
 
 
 if __name__ == "__main__":
