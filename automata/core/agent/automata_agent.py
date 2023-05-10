@@ -507,3 +507,7 @@ class MasterAutomataAgent(AutomataAgent):
         master_agent.completed = False
         master_agent._setup()
         return master_agent
+
+
+def test123(x):
+    return True
