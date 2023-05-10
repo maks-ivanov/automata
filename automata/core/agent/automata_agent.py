@@ -25,11 +25,8 @@ from automata.core.base.tool import ToolNotFoundError
 from automata.core.utils import format_text, load_config
 
 logger = logging.getLogger(__name__)
-
 if TYPE_CHECKING:
-    from automata.core.coordinator.automata_coordinator import (  # This import will only happen during type checking
-        AutomataCoordinator,
-    )
+    from automata.core.coordinator.automata_coordinator import AutomataCoordinator
 
 
 class AutomataAgent(Agent):
@@ -40,7 +37,7 @@ class AutomataAgent(Agent):
     """
 
     CONTINUE_MESSAGE: Final = "Continue, and return a result JSON when finished."
-    NUM_DEFAULT_MESSAGES: Final = 3  # Prompt + Assistant Initialization + User Task
+    NUM_DEFAULT_MESSAGES: Final = 3
     INITIALIZER_DUMMY: Final = "automata_initializer"
     ERROR_DUMMY_TOOL: Final = "error_reporter"
 
@@ -80,9 +77,6 @@ class AutomataAgent(Agent):
         """
         latest_responses = self.iter_task()
         while latest_responses is not None:
-            # Each iteration adds two messages, one from the assistant and one from the user
-            # If we have equal to or more than 2 * max_iters messages (less the default messages),
-            # then we have exceeded the max_iters
             if len(self.messages) - AutomataAgent.NUM_DEFAULT_MESSAGES >= self.max_iters * 2:
                 return "Result was not found before iterations exceeded max limit."
             latest_responses = self.iter_task()
@@ -111,9 +105,7 @@ class AutomataAgent(Agent):
             if self.stream
             else OpenAIChatCompletionResult(raw_data=response_summary).get_completion()
         )
-
         observations = self._generate_observations(response_text)
-
         completion_message = retrieve_completion_message(observations)
         if completion_message is not None:
             self.completed = True
@@ -124,7 +116,6 @@ class AutomataAgent(Agent):
                 else response_text,
             )
             return None
-
         assistant_message = self._save_message("assistant", response_text)
         user_message = self._save_message(
             "user",
@@ -132,7 +123,6 @@ class AutomataAgent(Agent):
             if len(observations) > 0
             else AutomataAgent.CONTINUE_MESSAGE,
         )
-
         return (assistant_message, user_message)
 
     def replay_messages(self) -> str:
@@ -194,7 +184,6 @@ class AutomataAgent(Agent):
         )
         session_id = self.session_id if self.session_id else str(uuid.uuid4())
         self.database_manager: AutomataDatabaseManager = AutomataDatabaseManager(session_id)
-
         self.database_manager._init_database()
         if self.session_id:
             self.messages = self.database_manager._load_previous_interactions()
@@ -206,9 +195,7 @@ class AutomataAgent(Agent):
             )
             for message in initial_messages:
                 self._save_message(message.role, message.content)
-
         self.instruction_payload.validate_fields(self.instruction_input_variables)
-
         logger.debug("Initializing with System Instruction:%s\n\n" % system_instruction)
         logger.debug("-" * 60)
         logger.debug("Session ID: %s" % self.session_id)
@@ -233,20 +220,16 @@ class AutomataAgent(Agent):
                     action.tool_name,
                     action.tool_args,
                 )
-                # Skip the initializer dummy tool which exists only for providing context
                 if tool_name == AutomataAgent.INITIALIZER_DUMMY:
                     continue
                 if tool_name == AutomataAgent.ERROR_DUMMY_TOOL:
-                    # Input becomes the output when an error is registered
                     outputs[tool_query.replace("query", "output")] = cast(str, tool_input)
                 else:
                     tool_output = self._execute_tool(tool_name, tool_input)
                     outputs[tool_query.replace("query", "output")] = tool_output
             elif isinstance(action, ResultAction):
                 (result_name, result_outputs) = (action.result_name, action.result_outputs)
-                # Skip the return result indicator which exists only for marking the return result
                 outputs[result_name] = "\n".join(result_outputs)
-
         return outputs
 
     def _execute_tool(self, tool_name: str, tool_input: List[str]) -> str:
@@ -262,7 +245,6 @@ class AutomataAgent(Agent):
         """
         tool_found = False
         tool_output = None
-
         for toolkit in self.llm_toolkits.values():
             for tool in toolkit.tools:
                 if tool.name == tool_name:
@@ -272,10 +254,8 @@ class AutomataAgent(Agent):
                     break
             if tool_found:
                 break
-
         if not tool_found:
             return ToolNotFoundError(tool_name).__str__()
-
         return cast(str, tool_output)
 
     def _build_tool_message(self):
@@ -305,12 +285,11 @@ class AutomataAgent(Agent):
         """
         outputs = {}
         for message in self.messages:
-            pattern = r"-\s(tool_output_\d+)\s+-\s(.*?)(?=-\s(tool_output_\d+)|$)"
+            pattern = "-\\s(tool_output_\\d+)\\s+-\\s(.*?)(?=-\\s(tool_output_\\d+)|$)"
             matches = re.finditer(pattern, message.content, re.DOTALL)
             for match in matches:
-                tool_name, tool_output = match.group(1), match.group(2).strip()
+                (tool_name, tool_output) = (match.group(1), match.group(2).strip())
                 outputs[tool_name] = tool_output
-
         for output_name in outputs:
             completion_message = completion_message.replace(
                 f"{{{output_name}}}", outputs[output_name]
@@ -329,15 +308,12 @@ class AutomataAgent(Agent):
         """
         assert "user_input_instructions" in formatters
         formatters["initializer_dummy_tool"] = AutomataAgent.INITIALIZER_DUMMY
-
         messages_config = load_config(ConfigCategory.INSTRUCTION.value, self.instruction_version)
         initial_messages = messages_config["initial_messages"]
-
         input_messages = []
         for message in initial_messages:
             input_message = format_text(formatters, message["content"])
             input_messages.append(OpenAIChatMessage(role=message["role"], content=input_message))
-
         return input_messages
 
     def _stream_message(self, response_summary: Any):
@@ -467,19 +443,17 @@ class MasterAutomataAgent(AutomataAgent):
         completion_message = super()._parse_completion_message(completion_message)
         outputs = {}
         for message in self.messages:
-            pattern = r"-\s(agent_output_\d+)\s+-\s(.*?)(?=-\s(agent_output_\d+)|$)"
+            pattern = "-\\s(agent_output_\\d+)\\s+-\\s(.*?)(?=-\\s(agent_output_\\d+)|$)"
             matches = re.finditer(pattern, message.content, re.DOTALL)
             for match in matches:
-                agent_version, agent_output = match.group(1), match.group(2).strip()
+                (agent_version, agent_output) = (match.group(1), match.group(2).strip())
                 outputs[agent_version] = agent_output
-
         for output_name in outputs:
             completion_message = completion_message.replace(
                 f"{{{output_name}}}", outputs[output_name]
             )
         return completion_message
 
-    # TODO - Can we implement this more cleanly?
     @classmethod
     def from_agent(cls, agent: AutomataAgent) -> "MasterAutomataAgent":
         """
@@ -507,3 +481,7 @@ class MasterAutomataAgent(AutomataAgent):
         master_agent.completed = False
         master_agent._setup()
         return master_agent
+
+
+def test123(x):
+    return True
