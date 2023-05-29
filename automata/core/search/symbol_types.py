@@ -167,6 +167,10 @@ class Symbol:
         return Symbol(self.uri, self.scheme, self.package, tuple(parent_descriptors))
 
     @property
+    def path(self) -> StrPath:
+        return ".".join([ele.name for ele in self.descriptors])
+
+    @property
     def module_name(self) -> str:
         return self.descriptors[0].name
 

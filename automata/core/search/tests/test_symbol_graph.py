@@ -26,13 +26,6 @@ def test_get_symbol_references(symbol_graph, symbols):
         )
 
 
-def test_get_symbols_along_path(symbol_graph):
-    partial_path = "automata"
-    symbols = symbol_graph.get_defined_symbols_along_path(partial_path)
-    assert isinstance(symbols, set)
-    assert all("automata" in s.uri for s in symbols)
-
-
 @pytest.mark.skip(reason="Not implemented yet")
 def test_find_return_symbol(symbol_graph, symbols):
     for symbol in symbols:

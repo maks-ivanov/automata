@@ -78,7 +78,7 @@ def get_rankable_symbols(
         for filter_string in filter_strings:
             if filter_string in symbol.uri:
                 do_continue = True
-                break
+
         if do_continue:
             continue
 
@@ -94,7 +94,6 @@ def get_rankable_symbols(
             continue
 
         filtered_symbols.append(symbol)
-
     return filtered_symbols
 
 

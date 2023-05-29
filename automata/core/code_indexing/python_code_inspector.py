@@ -1,27 +1,14 @@
 from __future__ import annotations
 
-import ast
 import logging
-import os
 import re
-from _ast import AsyncFunctionDef, ClassDef, FunctionDef
-from functools import cached_property, lru_cache
-from typing import Dict, Optional, Union
+from typing import Optional, Union
 
-from redbaron import (
-    ClassNode,
-    DefNode,
-    FromImportNode,
-    ImportNode,
-    Node,
-    NodeList,
-    RedBaron,
-    StringNode,
-)
+from redbaron import ClassNode, DefNode, Node, RedBaron, StringNode
 
 from automata.core.code_indexing.python_ast_indexer import PythonASTIndexer
 from automata.core.code_indexing.python_ast_navigator import PythonASTNavigator
-from automata.core.utils import root_path, root_py_path
+from automata.core.utils import root_py_path
 
 logger = logging.getLogger(__name__)
 FSTNode = Union[Node, RedBaron]

@@ -72,7 +72,6 @@ class SymbolSearcherFactory(SymbolFactory):
         symbol_graph_factory: SymbolGraphFactory = SymbolGraphFactory(),
         symbol_embedding_map_factory: SymbolEmbeddingMapFactory = SymbolEmbeddingMapFactory(),
         symbol_similarity_factory: SymbolSimilarityFactory = SymbolSimilarityFactory(),
-        symbol_rank_factory: SymbolRankFactory = SymbolRankFactory(),
         symbol_rank_config: Optional[SymbolRankConfig] = None,
         *args,
         **kwargs,
@@ -85,7 +84,6 @@ class SymbolSearcherFactory(SymbolFactory):
             symbol_graph_factory (SymbolGraphFactory): Factory for creating a SymbolGraph object.
             symbol_embedding_map_factory (SymbolEmbeddingMapFactory): Factory for creating a SymbolEmbeddingMap object.
             symbol_similarity_factory (SymbolSimilarityFactory): Factory for creating a SymbolSimilarity object.
-            symbol_rank_factory (SymbolRankFactory): Factory for creating a SymbolRank object.
             symbol_rank_config (SymbolRankConfig): Configuration for the SymbolRank object.
             *args: Variable length argument list.
             **kwargs: Arbitrary keyword arguments.
