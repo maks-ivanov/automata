@@ -124,8 +124,8 @@ class CallerCalleeManager:
                         print("Adding caller / callee edge for symbol = ", symbol)
                         self._graph.add_edge(symbol_object, ref.symbol, label="caller")
                         self._graph.add_edge(ref.symbol, symbol_object, label="callee")
-                except:
-                    print("Failed to add caller-callee edge for symbol = ", symbol)
+                except Exception as e:
+                    print(f"Failed to add caller-callee edge for {symbol} with error {e} ")
                     continue
 
 
@@ -317,10 +317,10 @@ class SymbolGraph:
     def get_symbol_relationships(self, symbol: Symbol) -> Set[Symbol]:
         return self.navigator.get_symbol_relationships(symbol)
 
-    def get_symbol_callers(self, symbol: Symbol) -> List[Symbol]:
+    def get_symbol_callers(self, symbol: Symbol) -> Dict[Symbol, Symbol]:
         return self.navigator.get_symbol_callers(symbol)
 
-    def get_symbol_callees(self, symbol: Symbol) -> List[Symbol]:
+    def get_symbol_callees(self, symbol: Symbol) -> Dict[Symbol, Symbol]:
         return self.navigator.get_symbol_callees(symbol)
 
     def get_references_to_symbol(self, symbol: Symbol) -> Dict[StrPath, List[SymbolReference]]:
