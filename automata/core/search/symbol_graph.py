@@ -120,8 +120,12 @@ class CallerCalleeManager:
 
             for ref in references_in_scope:
                 try:
-                    if ref.symbol.symbol_kind_by_suffix() == Descriptor.PythonKinds.Method:
-                        print("Adding caller / callee edge for symbol = ", symbol)
+                    if (
+                        ref.symbol.symbol_kind_by_suffix() == Descriptor.PythonKinds.Method
+                        or ref.symbol.symbol_kind_by_suffix() == Descriptor.PythonKinds.Class
+                    ):
+                        if ref.symbol == symbol_object:
+                            continue
                         self._graph.add_edge(symbol_object, ref.symbol, label="caller")
                         self._graph.add_edge(ref.symbol, symbol_object, label="callee")
                 except Exception as e:

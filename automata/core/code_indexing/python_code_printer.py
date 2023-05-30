@@ -57,6 +57,7 @@ class CodePrinter:
         self.process_dependencies(symbol, processing_depth)
         if symbols_to_context_ranks:
             self.process_nearest_symbols(symbols_to_context_ranks, processing_depth)
+        self.process_caller_callees(symbol, processing_depth)
 
     def process_headline(self, symbol: Symbol, processing_depth: PrintDepth) -> None:
         self.process_message(f"{symbol.path} --\n", processing_depth)
@@ -74,11 +75,12 @@ class CodePrinter:
         # If the method is nested, we only want to print the method signature
         # e.g. for dependencies and nearby symbols
         if processing_depth != CodePrinter.PrintDepth.TOP_LEVEL:
-            method_definition = f"{method.name}({method.arguments.dumps()})"
-            return_annotation = (
-                method.return_annotation.dumps() if method.return_annotation else "None"
-            )
-            self.process_message(f"{method_definition} -> {return_annotation}\n", processing_depth)
+            pass
+            # method_definition = f"{method.name}({method.arguments.dumps()})"
+            # return_annotation = (
+            #     method.return_annotation.dumps() if method.return_annotation else "None"
+            # )
+            # self.process_message(f"{method_definition} -> {return_annotation}\n", processing_depth)
         # Otherwise, we want to print the entire method
         else:
             for code_line in method.dumps().split("\n"):
@@ -97,6 +99,26 @@ class CodePrinter:
                 if "automata" not in dependency.uri:
                     continue
                 self.process_symbol(dependency, CodePrinter.PrintDepth.DEPENDENCY)
+
+    def process_caller_callees(self, symbol: Symbol, processing_depth: PrintDepth):
+        if processing_depth.TOP_LEVEL == processing_depth:
+            self.process_message(f"\nCallers:", processing_depth)
+            # print("symbol = ", symbol)
+            # query_symbol = (
+            #     symbol
+            #     if not symbol.uri.endswith("#")
+            #     else parse_symbol(f"{symbol.uri}__init__().")
+            # )
+            # print("query_symbol = ", query_symbol)
+            all_callers = list(self.graph.get_symbol_callers(symbol))
+            for caller in all_callers:
+                print("caller = ", caller)
+                self.process_message(str(caller.path), processing_depth)
+            self.process_message("\nCallees:", processing_depth)
+            all_callees = list(self.graph.get_symbol_callees(symbol))
+            for callee in all_callees:
+                print("callee = ", callee)
+                self.process_message(str(callee.path), processing_depth)
 
     def process_nearest_symbols(
         self,
