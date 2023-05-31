@@ -26,7 +26,6 @@ logger = logging.getLogger(__name__)
 def get_filtered_ranked_symbols(kwargs: Dict[str, Any], ranker: SymbolRank):
     selected_symbols = []
     selection_filters = kwargs.get("selection_filters", "").split(",")
-
     for symbol, _rank in ranker.get_ranks():
         if symbol.symbol_kind_by_suffix() != Descriptor.PythonKinds.Class:
             continue
@@ -118,27 +117,65 @@ def main(*args, **kwargs):
     symbol_searcher = SymbolSearcherFactory().create()
     selected_symbols = get_filtered_ranked_symbols(kwargs, ranker)
 
+    desc_to_full_symbol = {
+        ".".join([desc.name for desc in symbol.descriptors]): symbol for symbol in docs.keys()
+    }
+
     for selected_symbol in selected_symbols:
         raw_code = convert_to_fst_object(selected_symbol).dumps()
-        if (
-            selected_symbol in docs
-            and docs[selected_symbol][0] == raw_code
-            and not kwargs.get("hard_refresh")
-        ):
-            print(f"Continuing on {selected_symbol}")
-            continue
-        print(f"Generating docs for {selected_symbol}")
-        abbreviated_selected_symbol = selected_symbol.uri.split("/")[1].split("#")[0]
-        search_results = symbol_searcher.symbol_rank_search(abbreviated_selected_symbol)
-        search_list = [result[0] for result in search_results]
+        symbol_desc_identifier = ".".join([desc.name for desc in selected_symbol.descriptors])
+        map_symbol = desc_to_full_symbol.get(symbol_desc_identifier, None)
 
-        printer = CodePrinter(graph)
-        printer.process_symbol(selected_symbol, search_list)
-        symbol_overview = printer.message
-        completion = get_completion(selected_symbol, symbol_overview)
-        docs[selected_symbol] = (raw_code, symbol_overview, completion)
-        # Save after each iteration to lock in progress (saving is short compared to generating completion)
-        save_docs(kwargs, docs)
+        if (
+            not map_symbol
+            or (map_symbol and docs[map_symbol][0] != raw_code)
+            or kwargs.get("hard_refresh")
+        ):
+            print(f"Generating docs for {selected_symbol}")
+            abbreviated_selected_symbol = selected_symbol.uri.split("/")[1].split("#")[0]
+            search_results = symbol_searcher.symbol_rank_search(abbreviated_selected_symbol)
+            search_list = [result[0] for result in search_results]
+
+            printer = CodePrinter(graph)
+            printer.process_symbol(selected_symbol, search_list)
+            symbol_overview = printer.message
+            completion = get_completion(selected_symbol, symbol_overview)
+            docs[selected_symbol] = (raw_code, symbol_overview, completion)
+            # Save after each iteration to lock in progress (saving is short compared to generating completion)
+            save_docs(kwargs, docs)
+
+        elif map_symbol and docs[map_symbol][0] == raw_code and map_symbol != selected_symbol:
+            print(f"Updating docs for {selected_symbol}")
+            docs[selected_symbol] = docs[map_symbol]
+            del docs[map_symbol]
+
+        elif map_symbol and docs[map_symbol][0] == raw_code:
+            print(f"Continuing on {selected_symbol}")
+
+        else:
+            print(f"Symbol {selected_symbol} skipped.")
+
+    # for selected_symbol in selected_symbols:
+    #     raw_code = convert_to_fst_object(selected_symbol).dumps()
+    #     if (
+    #         selected_symbol in docs
+    #         and docs[selected_symbol][0] == raw_code
+    #         and not kwargs.get("hard_refresh")
+    #     ):
+    #         print(f"Continuing on {selected_symbol}")
+    #         continue
+    #     print(f"Generating docs for {selected_symbol}")
+    #     abbreviated_selected_symbol = selected_symbol.uri.split("/")[1].split("#")[0]
+    #     search_results = symbol_searcher.symbol_rank_search(abbreviated_selected_symbol)
+    #     search_list = [result[0] for result in search_results]
+
+    #     printer = CodePrinter(graph)
+    #     printer.process_symbol(selected_symbol, search_list)
+    #     symbol_overview = printer.message
+    #     completion = get_completion(selected_symbol, symbol_overview)
+    #     docs[selected_symbol] = (raw_code, symbol_overview, completion)
+    #     # Save after each iteration to lock in progress (saving is short compared to generating completion)
+    #     save_docs(kwargs, docs)
 
 
 if __name__ == "__main__":

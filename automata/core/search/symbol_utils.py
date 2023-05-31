@@ -8,7 +8,9 @@ from automata.core.code_indexing.module_tree_map import LazyModuleTreeMap
 from automata.core.search.symbol_types import Descriptor, Symbol, SymbolEmbedding
 
 
-def convert_to_fst_object(symbol: Symbol, module_map: Optional[LazyModuleTreeMap]) -> RedBaron:
+def convert_to_fst_object(
+    symbol: Symbol, module_map: Optional[LazyModuleTreeMap] = None
+) -> RedBaron:
     """
     Returns the RedBaron object for the given symbol.
     Args:

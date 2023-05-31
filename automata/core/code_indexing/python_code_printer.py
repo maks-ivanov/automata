@@ -4,7 +4,7 @@ from typing import List, Optional, Set
 
 from redbaron import RedBaron
 
-from automata.core.code_indexing.python_code_inspector import PythonCodeInspector
+from automata.core.code_indexing.python_code_retriever import PythonCodeRetriever
 from automata.core.code_indexing.syntax_tree_navigation import find_method_call_by_location
 from automata.core.code_indexing.utils import build_repository_overview
 from automata.core.search.symbol_graph import SymbolGraph
@@ -222,5 +222,5 @@ class CodePrinter:
 
     @staticmethod
     def _get_docstring(ast_object):
-        raw_doctring = PythonCodeInspector.get_docstring_from_node(ast_object).split("\n")
+        raw_doctring = PythonCodeRetriever.get_docstring_from_node(ast_object).split("\n")
         return "\n".join([ele.strip() for ele in raw_doctring]).strip()
