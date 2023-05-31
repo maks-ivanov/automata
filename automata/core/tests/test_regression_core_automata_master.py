@@ -16,7 +16,7 @@
 #         """
 #         def run(self) -> str:
 #             while True:
-#                 self.iter_task()
+#                 self.run_step()
 #                 if AutomataAgent.is_completion_message(self.messages[-2]["content"]):
 #                     return self.messages[-2]["content"]
 #                 if (len(self.messages) - AutomataAgent.NUM_DEFAULT_MESSAGES) >= self.max_iters * 2:

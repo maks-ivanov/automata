@@ -13,7 +13,7 @@ from automata.core.search.symbol_utils import convert_to_fst_object, get_rankabl
 logger = logging.getLogger(__name__)
 
 
-class RelationshipManager:
+class _RelationshipManager:
     """
     Manages the relationships between symbols in a graph.
     """
@@ -35,7 +35,7 @@ class RelationshipManager:
             )
 
 
-class OccurrenceManager:
+class _OccurrenceManager:
     """
     Manages the occurrences of a symbol in a graph.
     """
@@ -53,7 +53,7 @@ class OccurrenceManager:
                 continue
 
             occurrence_range = tuple(occurrence.range)
-            occurrence_roles = OccurrenceManager._process_symbol_roles(occurrence.symbol_roles)
+            occurrence_roles = _OccurrenceManager._process_symbol_roles(occurrence.symbol_roles)
             occurrence_reference = SymbolReference(
                 symbol=occurrence_symbol,
                 line_number=occurrence_range[0],
@@ -91,14 +91,14 @@ class OccurrenceManager:
         return result
 
 
-class CallerCalleeManager:
+class _CallerCalleeManager:
     """
     Manages the caller-callee relationships of a symbol in a graph.
     """
 
     def __init__(self, graph: nx.MultiDiGraph, document: Any):
         self._graph = graph
-        self.navigator = SymbolGraphNavigator(graph)
+        self.navigator = _SymbolGraphNavigator(graph)
         self.document = document
 
     def process(self):
@@ -126,8 +126,27 @@ class CallerCalleeManager:
                     ):
                         if ref.symbol == symbol_object:
                             continue
-                        self._graph.add_edge(symbol_object, ref.symbol, label="caller")
-                        self._graph.add_edge(ref.symbol, symbol_object, label="callee")
+                        # TODO - This approach will include non-call statements, like return statements
+                        # unfortunately, this seems necessary to get the full set of callers
+                        # e.g. omitting classes appears to remove constructor calls for X, like X()
+                        # For, we filtering is done downstream with the ASTNavigator
+                        # with current understanding, it seems handling will require AST awareness
+                        self._graph.add_edge(
+                            symbol_object,
+                            ref.symbol,
+                            line_number=ref.line_number,
+                            column_number=ref.column_number,
+                            roles=ref.roles,
+                            label="caller",
+                        )
+                        self._graph.add_edge(
+                            ref.symbol,
+                            symbol_object,
+                            line_number=ref.line_number,
+                            column_number=ref.column_number,
+                            roles=ref.roles,
+                            label="callee",
+                        )
                 except Exception as e:
                     print(f"Failed to add caller-callee edge for {symbol} with error {e} ")
                     continue
@@ -143,9 +162,6 @@ class GraphBuilder:
         self._graph = nx.MultiDiGraph()
 
     def build_graph(self):
-        """
-        Builds a symbol graph from a SCIP Index.
-        """
         for document in self.index.documents:
             self._add_file_vertices(document)
             self._add_symbol_vertices(document)
@@ -175,19 +191,19 @@ class GraphBuilder:
 
     def _process_relationships(self, document: Any):
         for symbol_information in document.symbols:
-            relationship_manager = RelationshipManager(self._graph, symbol_information)
+            relationship_manager = _RelationshipManager(self._graph, symbol_information)
             relationship_manager.process()
 
     def _process_occurrences(self, document: Any):
-        occurrence_manager = OccurrenceManager(self._graph, document)
+        occurrence_manager = _OccurrenceManager(self._graph, document)
         occurrence_manager.process()
 
     def _process_caller_callee_relationships(self, document: Any):
-        caller_callee_manager = CallerCalleeManager(self._graph, document)
+        caller_callee_manager = _CallerCalleeManager(self._graph, document)
         caller_callee_manager.process()
 
 
-class SymbolGraphNavigator:
+class _SymbolGraphNavigator:
     """
     Handles navigation of a symbol graph.
     """
@@ -238,23 +254,30 @@ class SymbolGraphNavigator:
 
         return result_dict
 
-    def get_symbol_callers(self, symbol: Symbol) -> Dict[Symbol, Symbol]:
+    def get_potential_symbol_callers(self, symbol: Symbol) -> Dict[SymbolReference, Symbol]:
         """
-        Returns a list of Symbols that are callers of the given symbol
+        TODO - Remove non-call statements from this return object
         """
         callers = {
-            caller: callee
+            SymbolReference(
+                symbol=caller,
+                line_number=data.get("line_number"),
+                column_number=data.get("column_number"),
+                roles=data.get("roles"),
+            ): callee
             for callee, caller, data in self._graph.out_edges(symbol, data=True)
             if data.get("label") == "callee"
         }
         return callers
 
-    def get_symbol_callees(self, symbol: Symbol) -> Dict[Symbol, Symbol]:
-        """
-        Returns a list of Symbols that are callees of the given symbol
-        """
+    def get_potential_symbol_callees(self, symbol: Symbol) -> Dict[Symbol, SymbolReference]:
         callees = {
-            callee: caller
+            callee: SymbolReference(
+                symbol=caller,
+                line_number=data.get("line_number"),
+                column_number=data.get("column_number"),
+                roles=data.get("roles"),
+            )
             for caller, callee, data in self._graph.out_edges(symbol, data=True)
             if data.get("label") == "caller"
         }
@@ -304,35 +327,111 @@ class SymbolGraphNavigator:
 
 class SymbolGraph:
     def __init__(self, index_path: str):
+        """
+        Initializes SymbolGraph with the path of an index protobuf file.
+
+        Args:
+            index_path (str): Path to index protobuf file
+        Returns:
+            SymbolGraph instance
+        """
         index = self._load_index_protobuf(index_path)
         builder = GraphBuilder(index)
         self._graph = builder.build_graph()
-        self.navigator = SymbolGraphNavigator(self._graph)
+        self.navigator = _SymbolGraphNavigator(self._graph)
 
     def get_all_files(self) -> List[File]:
+        """
+        Gets all file nodes in the graph.
+
+        Args:
+            None
+        Returns:
+            List of all defined symbols.
+        """
         return self.navigator.get_all_files()
 
     def get_all_defined_symbols(self) -> List[Symbol]:
-        return self.navigator.get_all_defined_symbols()
+        """
+        Gets all symbols defined in the graph.
+
+        Args:
+            None
+        Returns:
+            List[Symbol]: List of all defined symbols.
+        """
+        return list(set(self.navigator.get_all_defined_symbols()))
 
     def get_symbol_dependencies(self, symbol: Symbol) -> Set[Symbol]:
+        """
+        Gets all symbols which contain a specified partial path
+
+        Args:
+            partial_py_path (PyPath): The partial path to explain
+        Returns:
+            Set[Symbol]: Set of symbols that follow the partial path
+        """
         return self.navigator.get_symbol_dependencies(symbol)
 
     def get_symbol_relationships(self, symbol: Symbol) -> Set[Symbol]:
+        """
+        Gets the set of symbols with relationships to the given symbol.
+
+        Args:
+            symbol (Symbol): The symbol to get relationships for.
+        Returns:
+            Set[Symbol]: The list of relationships for the symbol.
+
+        # TODO: Consider implications of using list instead of set
+        """
         return self.navigator.get_symbol_relationships(symbol)
 
-    def get_symbol_callers(self, symbol: Symbol) -> Dict[Symbol, Symbol]:
-        return self.navigator.get_symbol_callers(symbol)
+    def get_potential_symbol_callers(self, symbol: Symbol) -> Dict[SymbolReference, Symbol]:
+        """
+        Gets the (potential) callers of the given symbol.
+        Requires downstream filtering to remove non-call statements.
 
-    def get_symbol_callees(self, symbol: Symbol) -> Dict[Symbol, Symbol]:
-        return self.navigator.get_symbol_callees(symbol)
+        Args:
+            symbol (Symbol): The symbol to get callers for.
+        Returns:
+            Dict[Symbol]: The map of callers to callees for the symbol.
+        """
+
+        return self.navigator.get_potential_symbol_callers(symbol)
+
+    def get_potential_symbol_callees(self, symbol: Symbol) -> Dict[Symbol, SymbolReference]:
+        """
+        Gets the callers of the given symbol.
+        Requires downstream filtering to remove non-call statements.
+
+        Args:
+            symbol (Symbol): The symbol to get callees for.
+        Returns:
+            Dict[Symbol]: The map of callees to callers for the symbol.
+        """
+        return self.navigator.get_potential_symbol_callees(symbol)
 
     def get_references_to_symbol(self, symbol: Symbol) -> Dict[StrPath, List[SymbolReference]]:
+        """
+        Gets all references to a given module in the symbol graph.
+
+        Args:
+            module (Symbol): The module to locate references for
+        Returns:
+            List[SymbolReference]: List of symbol references
+        """
         return self.navigator.get_references_to_symbol(symbol)
 
     def get_rankable_symbol_subgraph(self, flow_rank="to_dependents") -> nx.DiGraph:
         """
-        TODO: Can this be made more efficient?
+        Gets a detailed subgraph of rankable symbols.
+
+        Args:
+            symbol (str): The symbol in the form 'module`/ClassOrMethod#'
+
+        Returns:
+            List[str]: The list of dependencies for the symbol.
+        TODO: Can thi sbe made more efficient?
         TODO: Can we better handle edge cases that are not handled in obvious ways
         """
         G = nx.DiGraph()

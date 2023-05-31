@@ -13,7 +13,7 @@ class Agent(ABC):
         pass
 
     @abstractmethod
-    def iter_task(self) -> Optional[Tuple[OpenAIChatMessage, OpenAIChatMessage]]:
+    def run_step(self) -> Optional[Tuple[OpenAIChatMessage, OpenAIChatMessage]]:
         pass
 
     @abstractmethod

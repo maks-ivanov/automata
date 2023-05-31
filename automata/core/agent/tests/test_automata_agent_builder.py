@@ -12,7 +12,7 @@ def test_automata_agent_init(automata_agent):
     assert len(automata_agent.config.llm_toolkits.keys()) > 0
 
 
-def test_automata_agent_iter_task(
+def test_automata_agent_run_step(
     automata_agent,
 ):
     assert len(automata_agent.messages) == 3

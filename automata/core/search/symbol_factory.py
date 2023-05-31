@@ -18,13 +18,15 @@ class SymbolFactory:
 
 
 class SymbolGraphFactory(SymbolFactory):
-    def create(self, index_path: str) -> SymbolGraph:
+    def create(self, index_path: Optional[str] = None) -> SymbolGraph:
         """
         Creates a SymbolGraph object.
 
         Args:
             index_path (str): Path to the index file.
         """
+        if not index_path:
+            index_path = os.path.join(config_path(), ConfigCategory.SYMBOLS.value, "index.scip")
         return SymbolGraph(index_path)
 
 

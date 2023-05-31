@@ -18,7 +18,7 @@ from automata.core.search.symbol_utils import (
 )
 
 SymbolReferencesResult = Dict[StrPath, List[SymbolReference]]
-SymbolRankResult = List[Tuple[str, float]]
+SymbolRankResult = List[Tuple[Symbol, float]]
 SourceCodeResult = Optional[str]
 ExactSearchResult = Dict[str, List[int]]
 

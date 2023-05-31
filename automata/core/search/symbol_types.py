@@ -217,6 +217,18 @@ class SymbolReference:
     column_number: int
     roles: Dict[str, Any]
 
+    def __hash__(self) -> int:
+        # This could cause collisions if the same symbol is referenced in different files at the same location
+        return hash(f"{self.symbol.uri}-{self.line_number}-{self.column_number}")
+
+    def __eq__(self, other):
+        if isinstance(other, SymbolReference):
+            return (
+                f"{self.symbol.uri}-{self.line_number}-{self.column_number}"
+                == f"{other.symbol.uri}-{other.line_number}-{other.column_number}"
+            )
+        return False
+
 
 @dataclass
 class SymbolEmbedding:

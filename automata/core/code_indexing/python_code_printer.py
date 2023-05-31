@@ -1,158 +1,220 @@
-from enum import Enum
-from typing import Dict, List, Optional, Set, Tuple
+import os
+from contextlib import contextmanager
+from typing import List, Optional, Set
 
 from redbaron import RedBaron
 
+from automata.core.code_indexing.python_ast_indexer import PythonASTIndexer
+from automata.core.code_indexing.python_ast_navigator import PythonASTNavigator
 from automata.core.code_indexing.python_code_inspector import PythonCodeInspector
 from automata.core.search.symbol_graph import SymbolGraph
-from automata.core.search.symbol_types import Descriptor, Symbol
+from automata.core.search.symbol_types import Descriptor, Symbol, SymbolReference
 from automata.core.search.symbol_utils import convert_to_fst_object, get_rankable_symbols
+from automata.core.utils import root_py_path
+
+
+class CodePrinterConfig:
+    def __init__(
+        self,
+        spacer: str = "  ",
+        max_dependency_print_depth: int = 2,
+        max_recursion_depth: int = 1,
+        nearest_symbols_count: int = 5,
+    ):
+        self.spacer = spacer
+        self.nearest_symbols_count = nearest_symbols_count
+        self.max_dependency_print_depth = max_dependency_print_depth
+        self.max_recursion_depth = max_recursion_depth
 
 
 class CodePrinter:
-    class PrintDepth(Enum):
-        TOP_LEVEL = 0
-        DEPENDENCY = 1
-        NEARBY = 2
-
     def __init__(
         self,
         graph: SymbolGraph,
-        spacer: str = "  ",
+        config: CodePrinterConfig = CodePrinterConfig(),
+        indexer: Optional[PythonASTIndexer] = None,
     ):
         self.graph = graph
-        self.spacer = spacer
-
+        self.config = config
+        self.indexer = indexer or PythonASTIndexer.cached_default()
+        self.indent_level = 0
         self.reset()
+
+    @contextmanager
+    def IndentManager(self):
+        self.indent_level += 1
+        yield
+        self.indent_level -= 1
 
     def reset(self) -> None:
         self.message = ""
         self.obs_symbols: Set[Symbol] = set([])
         self.global_level = 0
 
-    def process_message(self, message: str, depth: PrintDepth):
-        def indent(depth: CodePrinter.PrintDepth) -> str:
-            return self.spacer * (
-                (1 if depth != CodePrinter.PrintDepth.TOP_LEVEL else 0) + self.global_level
-            )
+    def process_message(self, message: str):
+        def indent() -> str:
+            return self.config.spacer * self.indent_level
 
-        self.message += "\n".join([f"{indent(depth)}{ele}" for ele in message.split("\n")]) + "\n"
+        self.message += "\n".join([f"{indent()}{ele}" for ele in message.split("\n")]) + "\n"
 
     def process_symbol(
         self,
         symbol: Symbol,
-        processing_depth: PrintDepth = PrintDepth.TOP_LEVEL,
-        symbols_to_context_ranks: Optional[List[Tuple[Symbol, float]]] = None,
+        ranked_symbols: List[Symbol] = [],
     ) -> None:
-        if processing_depth == CodePrinter.PrintDepth.TOP_LEVEL:
-            self.reset()
+        self.obs_symbols.add(symbol)
+        if self._is_top_level():
+            self.print_directory_structure(symbol)
+        self.process_headline(symbol)
+        if self.indent_level <= self.config.max_dependency_print_depth:  # self._is_top_level():
+            with self.IndentManager():
+                self.process_class(symbol)
+                if self.indent_level <= self.config.max_recursion_depth:
+                    self.process_dependencies(symbol)
+                    self.process_nearest_symbols(ranked_symbols)
+                    self.process_callers(symbol)
+
+    def process_headline(self, symbol: Symbol) -> None:
+        if self._is_top_level():
+            self.process_message(f"Processing Symbol -\n{symbol.path} -\n")
+        else:
+            self.process_message(f"{symbol.path}\n")
+
+    def print_directory_structure(self, symbol: Symbol) -> None:
+        self.process_message(f"Local Directory Structure:")
+        with self.IndentManager():
+            symbol_path = str(symbol.path).replace(".", os.path.sep)
+            dir_path = os.path.join(root_py_path(), "..", symbol_path)
+            while not os.path.isdir(dir_path):
+                dir_path = os.path.dirname(dir_path)
+            overview = PythonASTIndexer.build_repository_overview(dir_path)
+            self.process_message(f"{overview}\n")
+
+    def process_class(self, symbol: Symbol) -> None:
         try:
             ast_object = convert_to_fst_object(symbol)
         except Exception as e:
             print(f"Error {e} while converting symbol {symbol.descriptors[-1].name}.")
             return None
-        self.obs_symbols.add(symbol)
-        self.process_headline(symbol, processing_depth)
-        self.process_methods(symbol, ast_object, processing_depth)
-        self.process_dependencies(symbol, processing_depth)
-        if symbols_to_context_ranks:
-            self.process_nearest_symbols(symbols_to_context_ranks, processing_depth)
-        self.process_caller_callees(symbol, processing_depth)
 
-    def process_headline(self, symbol: Symbol, processing_depth: PrintDepth) -> None:
-        self.process_message(f"{symbol.path} --\n", processing_depth)
+        def process_variables(ast_object: RedBaron) -> None:
+            assignments = ast_object.find_all("assignment")
+            if len(assignments) > 0:
+                self.process_message(f"Variables:")
+            with self.IndentManager():
+                for assignment in assignments:
+                    if assignment.parent == ast_object:
+                        self.process_message(
+                            f"{str(assignment.target.dumps())}={str(assignment.value.dumps())}"
+                        )
+                self.process_message("")
 
-    def process_methods(
-        self, symbol: Symbol, ast_object: RedBaron, processing_depth: PrintDepth
-    ) -> None:
-        methods = sorted(ast_object.find_all("DefNode"), key=lambda x: x.name)
-        for method in methods:
-            self.process_method(method, processing_depth)
+        def process_methods(ast_object: RedBaron) -> None:
+            methods = sorted(ast_object.find_all("DefNode"), key=lambda x: x.name)
+            if len(methods) > 0:
+                self.process_message(f"Methods:")
+            with self.IndentManager():
+                for method in methods:
+                    self.process_method(method)
 
-    def process_method(self, method: RedBaron, processing_depth: PrintDepth) -> None:
+        process_variables(ast_object)
+        process_methods(ast_object)
+
+    def process_method(self, method: RedBaron, detailed: bool = False) -> None:
         if CodePrinter._is_private_method(method):
             return
+
         # If the method is nested, we only want to print the method signature
         # e.g. for dependencies and nearby symbols
-        if processing_depth != CodePrinter.PrintDepth.TOP_LEVEL:
-            pass
-            # method_definition = f"{method.name}({method.arguments.dumps()})"
-            # return_annotation = (
-            #     method.return_annotation.dumps() if method.return_annotation else "None"
-            # )
-            # self.process_message(f"{method_definition} -> {return_annotation}\n", processing_depth)
+        if self._is_within_second_call():  # e.g. a dependency or related symbol
+            method_definition = f"{method.name}({method.arguments.dumps()})"
+            return_annotation = (
+                method.return_annotation.dumps() if method.return_annotation else "None"
+            )
+            self.process_message(f"{method_definition} -> {return_annotation}\n")
         # Otherwise, we want to print the entire method
-        else:
+        elif self._is_within_top_call():  # e.g. top level
             for code_line in method.dumps().split("\n"):
-                self.process_message(code_line, processing_depth)
+                self.process_message(code_line)
 
-    def process_dependencies(self, symbol: Symbol, processing_depth: PrintDepth):
-        if processing_depth.TOP_LEVEL == processing_depth:
-            self.process_message("Dependencies:", processing_depth)
-            all_dependencies = list(self.graph.get_symbol_dependencies(symbol))
-            filtered_dependencies = get_rankable_symbols(all_dependencies)
-            for dependency in filtered_dependencies:
-                if not CodePrinter._is_class(dependency):
-                    continue
-                if dependency == symbol:
-                    continue
-                if "automata" not in dependency.uri:
-                    continue
-                self.process_symbol(dependency, CodePrinter.PrintDepth.DEPENDENCY)
+    def process_dependencies(self, symbol: Symbol) -> None:
+        if self._is_top_level():
+            self.process_message("Dependencies:")
+            with self.IndentManager():
+                all_dependencies = list(self.graph.get_symbol_dependencies(symbol))
+                filtered_dependencies = get_rankable_symbols(all_dependencies)
+                for dependency in filtered_dependencies:
+                    if not CodePrinter._is_class(dependency):
+                        continue
+                    if dependency == symbol:
+                        continue
+                    if (
+                        "automata" not in dependency.uri
+                    ):  # TODO - Make this cleaner in case "automata" is not the key URI
+                        continue
+                    self.process_symbol(dependency)
 
-    def process_caller_callees(self, symbol: Symbol, processing_depth: PrintDepth):
-        if processing_depth.TOP_LEVEL == processing_depth:
-            self.process_message(f"\nCallers:", processing_depth)
-            # print("symbol = ", symbol)
-            # query_symbol = (
-            #     symbol
-            #     if not symbol.uri.endswith("#")
-            #     else parse_symbol(f"{symbol.uri}__init__().")
-            # )
-            # print("query_symbol = ", query_symbol)
-            all_callers = list(self.graph.get_symbol_callers(symbol))
-            for caller in all_callers:
-                print("caller = ", caller)
-                self.process_message(str(caller.path), processing_depth)
-            self.process_message("\nCallees:", processing_depth)
-            all_callees = list(self.graph.get_symbol_callees(symbol))
-            for callee in all_callees:
-                print("callee = ", callee)
-                self.process_message(str(callee.path), processing_depth)
+    def process_callers(self, symbol: Symbol) -> None:
+        if self.indent_level < 2:
+            self.process_message(f"Callers:")
+        else:
+            self.process_message(f"Caller Callers:")
+
+        with self.IndentManager():
+            all_potential_callers = list(self.graph.get_potential_symbol_callers(symbol))
+
+            def find_call(caller: SymbolReference) -> Optional[RedBaron]:
+                module = convert_to_fst_object(caller.symbol)
+                line_number = caller.line_number
+                column_number = caller.column_number + len(symbol.descriptors[-1].name)
+                return PythonASTNavigator.find_method_call_by_location(
+                    module, line_number, column_number
+                )
+
+            for caller in all_potential_callers:
+                call = find_call(caller)
+                if call is None:
+                    continue
+
+                self.process_message(str(caller.symbol.path))
+
+                # Call a level deeper when we encounter a factory or builder
+                if "Factory" in str(caller.symbol.path) or "Builder" in str(caller.symbol.path):
+                    self.process_callers(caller.symbol)
+
+                with self.IndentManager():
+                    call_parent = call.parent if call is None else None  # type: ignore
+                    if call_parent is None:
+                        continue
+                    self.process_message(str(call_parent.dumps()))
 
     def process_nearest_symbols(
         self,
-        ranked_search_results: List[Tuple[Symbol, float]],
-        processing_depth: PrintDepth,
-        n_symbols: int = 5,
-    ):
-        self.process_message("Nearest Symbols:", processing_depth)
-        printed_nearby_symbols = 0
-        for ranked_symbol, rank in ranked_search_results:
-            if printed_nearby_symbols >= n_symbols:
-                break
-            if ranked_symbol.symbol_kind_by_suffix() != Descriptor.PythonKinds.Class:
-                continue
-            elif ranked_symbol in self.obs_symbols:
-                continue
-            else:
-                printed_nearby_symbols += 1
-                # self.obs_symbols.add(symbol)
-                self.process_symbol(ranked_symbol, CodePrinter.PrintDepth.NEARBY)
+        search_list: List[Symbol],
+    ) -> None:
+        self.process_message("Closely Related Symbols:")
+        with self.IndentManager():
+            if len(search_list) > 0:
+                printed_nearby_symbols = 0
+                for ranked_symbol in search_list:
+                    if printed_nearby_symbols >= self.config.nearest_symbols_count:
+                        break
+                    if ranked_symbol.symbol_kind_by_suffix() != Descriptor.PythonKinds.Class:
+                        continue
+                    elif ranked_symbol in self.obs_symbols:
+                        continue
+                    else:
+                        printed_nearby_symbols += 1
+                        self.process_symbol(ranked_symbol)
 
-    def process_target_symbols(
-        self,
-        symbols_to_context_ranks: Dict[Symbol, List[Tuple[Symbol, float]]],
-        available_symbols: List[Symbol],
-    ):
-        for target_symbol in symbols_to_context_ranks.keys():
-            for symbol in available_symbols:
-                if symbol == target_symbol:
-                    self.process_symbol(
-                        symbol,
-                        CodePrinter.PrintDepth.TOP_LEVEL,
-                        symbols_to_context_ranks[target_symbol],
-                    )
+    def _is_top_level(self) -> bool:
+        return self.indent_level == 0
+
+    def _is_within_top_call(self) -> bool:
+        return self.indent_level == 2
+
+    def _is_within_second_call(self) -> bool:
+        return self.indent_level == 4
 
     @staticmethod
     def _is_private_method(ast_object):

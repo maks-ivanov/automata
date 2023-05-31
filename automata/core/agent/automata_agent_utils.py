@@ -1,15 +1,18 @@
 import logging
-from typing import Dict, Optional
+from typing import TYPE_CHECKING, Dict, Optional
 
 from automata.configs.automata_agent_configs import AutomataAgentConfig
 from automata.core.agent.automata_agent_enums import ActionIndicator, ResultField
 
 logger = logging.getLogger(__name__)
 
+if TYPE_CHECKING:
+    from automata.core.agent.automata_agent import AutomataAgent
+
 
 class AutomataAgentFactory:
     @staticmethod
-    def create_agent(instructions: str, config: Optional[AutomataAgentConfig]):
+    def create_agent(instructions: str, config: Optional[AutomataAgentConfig]) -> "AutomataAgent":
         from automata.core.agent.automata_agent import AutomataAgent
 
         agent = AutomataAgent(instructions=instructions, config=config)
