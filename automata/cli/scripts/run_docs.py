@@ -145,7 +145,7 @@ def main(*args, **kwargs):
             save_docs(kwargs, docs)
 
         elif map_symbol and docs[map_symbol][0] == raw_code and map_symbol != selected_symbol:
-            print(f"Updating docs for {selected_symbol}")
+            print(f"Updating symbol for {selected_symbol}")
             docs[selected_symbol] = docs[map_symbol]
             del docs[map_symbol]
 
@@ -154,28 +154,6 @@ def main(*args, **kwargs):
 
         else:
             print(f"Symbol {selected_symbol} skipped.")
-
-    # for selected_symbol in selected_symbols:
-    #     raw_code = convert_to_fst_object(selected_symbol).dumps()
-    #     if (
-    #         selected_symbol in docs
-    #         and docs[selected_symbol][0] == raw_code
-    #         and not kwargs.get("hard_refresh")
-    #     ):
-    #         print(f"Continuing on {selected_symbol}")
-    #         continue
-    #     print(f"Generating docs for {selected_symbol}")
-    #     abbreviated_selected_symbol = selected_symbol.uri.split("/")[1].split("#")[0]
-    #     search_results = symbol_searcher.symbol_rank_search(abbreviated_selected_symbol)
-    #     search_list = [result[0] for result in search_results]
-
-    #     printer = CodePrinter(graph)
-    #     printer.process_symbol(selected_symbol, search_list)
-    #     symbol_overview = printer.message
-    #     completion = get_completion(selected_symbol, symbol_overview)
-    #     docs[selected_symbol] = (raw_code, symbol_overview, completion)
-    #     # Save after each iteration to lock in progress (saving is short compared to generating completion)
-    #     save_docs(kwargs, docs)
 
 
 if __name__ == "__main__":
@@ -194,7 +172,7 @@ if __name__ == "__main__":
             help="Selection criteria for symbols.",
         )
         parser.add_argument(
-            "-n", "--top_n_symbols", type=int, default=50, help="Number of top symbols to select."
+            "-n", "--top_n_symbols", type=int, default=20, help="Number of top symbols to select."
         )
         parser.add_argument(
             "-u", "--update_docs", action="store_true", help="Flag to update the docs."
