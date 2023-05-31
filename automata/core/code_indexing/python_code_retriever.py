@@ -57,7 +57,9 @@ class PythonCodeRetriever:
         """
 
         module = self.module_tree_map.get_module(module_dotpath)
-        return PythonCodeRetriever._get_docstring(find_syntax_tree_node(module, object_path))
+        return PythonCodeRetriever.get_docstring_from_node(
+            find_syntax_tree_node(module, object_path)
+        )
 
     def get_source_code_without_docstrings(
         self, module_dotpath: str, object_path: Optional[str]
@@ -292,16 +294,7 @@ class PythonCodeRetriever:
         return result
 
     @staticmethod
-    def _create_line_number_tuples(node: FSTNode, start_line: int, start_col: int):
-        result = []
-        for i, line in enumerate(node.dumps().strip().splitlines()):
-            if i == 0 and not line.startswith(" " * (start_col - 1)):
-                line = " " * (start_col - 1) + line
-            result.append((start_line + i, line))
-        return result
-
-    @staticmethod
-    def _get_docstring(node: Optional[FSTNode]) -> str:
+    def get_docstring_from_node(node: Optional[FSTNode]) -> str:
         if not node:
             return NO_RESULT_FOUND_STR
 
@@ -310,3 +303,12 @@ class PythonCodeRetriever:
             if isinstance(filtered_nodes[0], StringNode):
                 return filtered_nodes[0].value.replace('"""', "").replace("'''", "")
         return ""
+
+    @staticmethod
+    def _create_line_number_tuples(node: FSTNode, start_line: int, start_col: int):
+        result = []
+        for i, line in enumerate(node.dumps().strip().splitlines()):
+            if i == 0 and not line.startswith(" " * (start_col - 1)):
+                line = " " * (start_col - 1) + line
+            result.append((start_line + i, line))
+        return result

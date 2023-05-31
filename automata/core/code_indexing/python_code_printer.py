@@ -4,9 +4,9 @@ from typing import List, Optional, Set
 
 from redbaron import RedBaron
 
-from automata.core.code_indexing.python_ast_indexer import PythonASTIndexer
-from automata.core.code_indexing.python_ast_navigator import PythonASTNavigator
 from automata.core.code_indexing.python_code_inspector import PythonCodeInspector
+from automata.core.code_indexing.syntax_tree_navigation import find_method_call_by_location
+from automata.core.code_indexing.utils import build_repository_overview
 from automata.core.search.symbol_graph import SymbolGraph
 from automata.core.search.symbol_types import Descriptor, Symbol, SymbolReference
 from automata.core.search.symbol_utils import convert_to_fst_object, get_rankable_symbols
@@ -32,11 +32,9 @@ class CodePrinter:
         self,
         graph: SymbolGraph,
         config: CodePrinterConfig = CodePrinterConfig(),
-        indexer: Optional[PythonASTIndexer] = None,
     ):
         self.graph = graph
         self.config = config
-        self.indexer = indexer or PythonASTIndexer.cached_default()
         self.indent_level = 0
         self.reset()
 
@@ -87,7 +85,7 @@ class CodePrinter:
             dir_path = os.path.join(root_py_path(), "..", symbol_path)
             while not os.path.isdir(dir_path):
                 dir_path = os.path.dirname(dir_path)
-            overview = PythonASTIndexer.build_repository_overview(dir_path)
+            overview = build_repository_overview(dir_path)
             self.process_message(f"{overview}\n")
 
     def process_class(self, symbol: Symbol) -> None:
@@ -167,9 +165,7 @@ class CodePrinter:
                 module = convert_to_fst_object(caller.symbol)
                 line_number = caller.line_number
                 column_number = caller.column_number + len(symbol.descriptors[-1].name)
-                return PythonASTNavigator.find_method_call_by_location(
-                    module, line_number, column_number
-                )
+                return find_method_call_by_location(module, line_number, column_number)
 
             for caller in all_potential_callers:
                 call = find_call(caller)
@@ -226,5 +222,5 @@ class CodePrinter:
 
     @staticmethod
     def _get_docstring(ast_object):
-        raw_doctring = PythonCodeInspector._get_docstring(ast_object).split("\n")
+        raw_doctring = PythonCodeInspector.get_docstring_from_node(ast_object).split("\n")
         return "\n".join([ele.strip() for ele in raw_doctring]).strip()
