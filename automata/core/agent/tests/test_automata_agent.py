@@ -57,14 +57,14 @@ def test_save_and_load_interaction(automata_agent):
 
 
 @patch("openai.ChatCompletion.create")
-def test_run_step_without_api_call(mock_openai_chatcompletion_create, automata_agent):
+def test_iter_step_without_api_call(mock_openai_chatcompletion_create, automata_agent):
     # Mock the API response
     mock_openai_chatcompletion_create.return_value = {
         "choices": [{"message": {"content": "The dummy_tool has been tested successfully."}}]
     }
 
-    # Call the run_step method and store the result
-    result = automata_agent.run_step()
+    # Call the iter_step method and store the result
+    result = automata_agent.iter_step()
 
     # Check if the result is as expected
     assistant_message, user_message = result
@@ -113,14 +113,14 @@ def mock_openai_response_with_completion_message():
 
 @pytest.mark.parametrize("api_response", [mock_openai_response_with_completion_message()])
 @patch("openai.ChatCompletion.create")
-def test_run_step_with_completion_message(
+def test_iter_step_with_completion_message(
     mock_openai_chatcompletion_create, api_response, automata_agent
 ):
     # Mock the API response
     mock_openai_chatcompletion_create.return_value = api_response
 
-    # Call the run_step method and store the result
-    result = automata_agent.run_step()
+    # Call the iter_step method and store the result
+    result = automata_agent.iter_step()
 
     # Check if the result is None, indicating that the agent has completed
     assert result is None
@@ -158,12 +158,12 @@ def mock_openai_response_with_completion_tool_message_to_parse():
     "api_response", [mock_openai_response_with_completion_tool_message_to_parse()]
 )
 @patch("openai.ChatCompletion.create")
-def test_run_step_with_parsed_completion_message(
+def test_iter_step_with_parsed_completion_message(
     mock_openai_chatcompletion_create, api_response, automata_agent
 ):
     # Mock the API response
     mock_openai_chatcompletion_create.return_value = api_response
-    automata_agent.run_step()
+    automata_agent.iter_step()
     completion_message = automata_agent.messages[-1].content
     stripped_completion_message = [ele.strip() for ele in completion_message.split("\n")]
     assert stripped_completion_message[0] == "task_0"
@@ -198,7 +198,7 @@ def mock_openai_response_with_completion_agent_message_to_parse():
     "api_response", [mock_openai_response_with_completion_agent_message_to_parse()]
 )
 @patch("openai.ChatCompletion.create")
-def test_run_step_with_parsed_completion_message_2(
+def test_iter_step_with_parsed_completion_message_2(
     mock_openai_chatcompletion_create,
     api_response,
     automata_agent_with_dev_main_builder,
@@ -218,7 +218,7 @@ def test_run_step_with_parsed_completion_message_2(
     )
     # Mock the API response
     mock_openai_chatcompletion_create.return_value = api_response
-    automata_agent.run_step()
+    automata_agent.iter_step()
 
     completion_message = automata_agent.messages[-1].content
     stripped_completion_message = [ele.strip() for ele in completion_message.split("\n")]
@@ -229,7 +229,7 @@ def test_run_step_with_parsed_completion_message_2(
     "api_response", [mock_openai_response_with_completion_agent_message_to_parse()]
 )
 @patch("openai.ChatCompletion.create")
-def test_run_step_with_parsed_completion_message_main_2(
+def test_iter_step_with_parsed_completion_message_main_2(
     mock_openai_chatcompletion_create,
     api_response,
     automata_agent_with_dev_main_builder,
@@ -250,7 +250,7 @@ def test_run_step_with_parsed_completion_message_main_2(
     automata_agent.set_coordinator(MagicMock())  # set a dumm
     # Mock the API response
     mock_openai_chatcompletion_create.return_value = api_response
-    automata_agent.run_step()
+    automata_agent.iter_step()
 
     completion_message = automata_agent.messages[-1].content
     stripped_completion_message = [ele.strip() for ele in completion_message.split("\n")]

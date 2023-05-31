@@ -63,7 +63,7 @@ class AutomataAgent(Agent):
 
         self.coordinator = coordinator
 
-    def run_step(self) -> Optional[Tuple[OpenAIChatMessage, OpenAIChatMessage]]:
+    def iter_step(self) -> Optional[Tuple[OpenAIChatMessage, OpenAIChatMessage]]:
         """
         Executes a single iteration of the task and returns the latest assistant and user messages.
 
@@ -128,7 +128,7 @@ class AutomataAgent(Agent):
         Returns:
             str: The final result or an error message if the result wasn't found in time.
         """
-        latest_responses = self.run_step()
+        latest_responses = self.iter_step()
         while latest_responses is not None:
             # Each iteration adds two messages, one from the assistant and one from the user
             # If we have equal to or more than 2 * max_iters messages (less the default messages),
@@ -139,7 +139,7 @@ class AutomataAgent(Agent):
             ):
                 debug_summary = self._get_debug_summary()
                 return f"Result was not found before iterations exceeded configured max limit: {self.config.max_iters}. Debug summary: {debug_summary}"
-            latest_responses = self.run_step()
+            latest_responses = self.iter_step()
         return self.messages[-1].content
 
     def setup(self):

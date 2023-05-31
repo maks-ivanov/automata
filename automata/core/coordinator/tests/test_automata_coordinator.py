@@ -145,7 +145,7 @@ def mocked_execute_agent(_):
 
 @pytest.mark.parametrize("api_response", [mock_openai_response_with_agent_query()])
 @patch("openai.ChatCompletion.create")
-def test_run_step_with_agent_query(
+def test_iter_step_with_agent_query(
     mock_openai_chatcompletion_create, api_response, coordinator, main_agent
 ):
     mock_openai_chatcompletion_create.return_value = api_response
@@ -155,7 +155,7 @@ def test_run_step_with_agent_query(
 
     main_agent._execute_agent = MagicMock(side_effect=mocked_execute_agent)
 
-    main_agent.run_step()
+    main_agent.iter_step()
 
     completion_message = main_agent.messages[-1].content
     assert "- agent_output_0" in completion_message
@@ -201,7 +201,7 @@ def mock_openai_response_with_agent_query_and_tool_queries():
     "api_response", [mock_openai_response_with_agent_query_and_tool_queries()]
 )
 @patch("openai.ChatCompletion.create")
-def test_run_step_with_agent_and_tool_query(
+def test_iter_step_with_agent_and_tool_query(
     mock_openai_chatcompletion_create, api_response, coordinator, main_agent
 ):
     coordinator.set_main_agent(main_agent)
@@ -210,7 +210,7 @@ def test_run_step_with_agent_and_tool_query(
 
     main_agent._execute_agent = MagicMock(side_effect=mocked_execute_agent)
 
-    main_agent.run_step()
+    main_agent.iter_step()
 
     completion_message = main_agent.messages[-1].content
     assert "- tool_output_0" in completion_message
@@ -221,7 +221,7 @@ def test_run_step_with_agent_and_tool_query(
 
 @pytest.mark.parametrize("api_response", [mock_openai_response_with_agent_query()])
 @patch("openai.ChatCompletion.create")
-def test_run_step_with_agent_and_tool_query_2(
+def test_iter_step_with_agent_and_tool_query_2(
     mock_openai_chatcompletion_create, api_response, coordinator, main_agent
 ):
     coordinator.set_main_agent(main_agent)
@@ -230,7 +230,7 @@ def test_run_step_with_agent_and_tool_query_2(
 
     main_agent._execute_agent = MagicMock(side_effect=mocked_execute_agent)
 
-    main_agent.run_step()
+    main_agent.iter_step()
 
     completion_message = main_agent.messages[-1].content
     assert "- agent_output_0" in completion_message
@@ -262,7 +262,7 @@ def mock_openai_response_with_agent_query_1():
 
 @pytest.mark.parametrize("api_response", [mock_openai_response_with_agent_query_1()])
 @patch("openai.ChatCompletion.create")
-def test_run_step_with_agent_and_tool_query_3(
+def test_iter_step_with_agent_and_tool_query_3(
     mock_openai_chatcompletion_create, api_response, coordinator, main_agent
 ):
     coordinator.set_main_agent(main_agent)
@@ -271,7 +271,7 @@ def test_run_step_with_agent_and_tool_query_3(
 
     main_agent._execute_agent = MagicMock(side_effect=mocked_execute_agent)
 
-    main_agent.run_step()
+    main_agent.iter_step()
 
     completion_message = main_agent.messages[-1].content
     assert "- agent_output_1" in completion_message
