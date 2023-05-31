@@ -157,8 +157,9 @@ class GraphBuilder:
     Builds a symbol graph from an Index.
     """
 
-    def __init__(self, index: Index):
+    def __init__(self, index: Index, build_caller_relationships: bool = False):
         self.index = index
+        self.build_caller_relationships = build_caller_relationships
         self._graph = nx.MultiDiGraph()
 
     def build_graph(self):
@@ -167,7 +168,8 @@ class GraphBuilder:
             self._add_symbol_vertices(document)
             self._process_relationships(document)
             self._process_occurrences(document)
-            self._process_caller_callee_relationships(document)
+            if self.build_caller_relationships:
+                self._process_caller_callee_relationships(document)
 
         return self._graph
 

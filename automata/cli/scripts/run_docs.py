@@ -16,7 +16,7 @@ from automata.core.search.symbol_factory import (
     SymbolSearcherFactory,
 )
 from automata.core.search.symbol_rank.symbol_rank import SymbolRank, SymbolRankConfig
-from automata.core.search.symbol_types import Symbol
+from automata.core.search.symbol_types import Descriptor, Symbol
 from automata.core.search.symbol_utils import convert_to_fst_object
 from automata.core.utils import config_path
 
@@ -25,11 +25,16 @@ logger = logging.getLogger(__name__)
 
 def get_filtered_ranked_symbols(kwargs: Dict[str, Any], ranker: SymbolRank):
     selected_symbols = []
+    selection_filters = kwargs.get("selection_filters", "").split(",")
+
     for symbol, _rank in ranker.get_ranks():
-        if kwargs.get("selection_filter", "") in symbol.uri:
+        if symbol.symbol_kind_by_suffix() != Descriptor.PythonKinds.Class:
+            continue
+        if any(filter_ in symbol.uri for filter_ in selection_filters):
             selected_symbols.append(symbol)
             if len(set(selected_symbols)) >= kwargs.get("top_n_symbols", 0):
                 break
+
     return selected_symbols
 
 
@@ -81,7 +86,8 @@ def load_docs(kwargs: Dict[str, Any]) -> Dict[Symbol, Tuple[str, str, str]]:
             if not os.path.exists(doc_path):
                 raise Exception("No docs to update.")
             with open(doc_path, "r") as file:
-                docs = jsonpickle.decode(file.read())
+                loaded_docs: Dict = jsonpickle.decode(file.read())
+                docs = {Symbol.from_string(key): value for key, value in loaded_docs.items()}
         except Exception as e:
             logger.error(f"Failed to load docs: {e}")
     return docs
@@ -101,6 +107,8 @@ def save_docs(kwargs: Dict[str, Any], docs: Dict[Symbol, Tuple[str, str, str]]):
 
 
 def main(*args, **kwargs):
+    docs = load_docs(kwargs)
+
     graph = SymbolGraphFactory().create()
     config = SymbolRankConfig()
     subgraph = graph.get_rankable_symbol_subgraph(
@@ -108,9 +116,8 @@ def main(*args, **kwargs):
     )
     ranker = SymbolRankFactory().create(subgraph, config)
     symbol_searcher = SymbolSearcherFactory().create()
-
-    docs = load_docs(kwargs)
     selected_symbols = get_filtered_ranked_symbols(kwargs, ranker)
+
     for selected_symbol in selected_symbols:
         raw_code = convert_to_fst_object(selected_symbol).dumps()
         if (
@@ -130,9 +137,8 @@ def main(*args, **kwargs):
         symbol_overview = printer.message
         completion = get_completion(selected_symbol, symbol_overview)
         docs[selected_symbol] = (raw_code, symbol_overview, completion)
-        break
-
-    save_docs(kwargs, docs)
+        # Save after each iteration to lock in progress (saving is short compared to generating completion)
+        save_docs(kwargs, docs)
 
 
 if __name__ == "__main__":
@@ -145,10 +151,13 @@ if __name__ == "__main__":
         )
         parser.add_argument("-i", "--input", help="The path to the file that needs documentation.")
         parser.add_argument(
-            "-s", "--selection_filter", default="Automata", help="Selection criteria for symbols."
+            "-s",
+            "--selection_filters",
+            default="Automata,Symbol",
+            help="Selection criteria for symbols.",
         )
         parser.add_argument(
-            "-n", "--top_n_symbols", type=int, default=20, help="Number of top symbols to select."
+            "-n", "--top_n_symbols", type=int, default=50, help="Number of top symbols to select."
         )
         parser.add_argument(
             "-u", "--update_docs", action="store_true", help="Flag to update the docs."
