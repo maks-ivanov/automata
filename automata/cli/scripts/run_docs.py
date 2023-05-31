@@ -37,22 +37,72 @@ def get_filtered_ranked_symbols(kwargs: Dict[str, Any], ranker: SymbolRank):
     return selected_symbols
 
 
-def get_completion(selected_symbol: Symbol, symbol_overview: str):
-    example = textwrap.dedent(
-        """
-        8.3. Handling Exceptions
-        It is possible to write programs that handle selected exceptions. Look at the following example, which asks the user for input until a valid integer has been entered, but allows the user to interrupt the program (using Control-C or whatever the operating system supports); note that a user-generated interruption is signalled by raising the KeyboardInterrupt exception.
+def get_full_doc_completion(selected_symbol: Symbol, symbol_overview: str) -> str:
+    example_0 = textwrap.dedent(
+        '''
+        ...
+        ## Usage Example
 
-        >>>
-        while True:
-            try:
-                x = int(input("Please enter a number: "))
-                break
-            except ValueError:
-                print("Oops!  That was no valid number.  Try again...")
+        ```python
+        from transformers import PegasusForConditionalGeneration, PegasusTokenizer
+        import torch
 
-        The try statement works as follows.
-        """
+        src_text = [
+            """ PG&E .... """
+        ]
+
+        model_name = "google/pegasus-xsum"
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        tokenizer = PegasusTokenizer.from_pretrained(model_name)
+        model = PegasusForConditionalGeneration.from_pretrained(model_name).to(device)
+        batch = tokenizer(src_text, truncation=True, padding="longest", return_tensors="pt").to(device)
+        translated = model.generate(**batch)
+        tgt_text = tokenizer.batch_decode(translated, skip_special_tokens=True)
+        assert (
+            tgt_text[0]
+            == "California's..."
+        )
+        '''
+    )
+
+    example_1 = textwrap.dedent(
+        '''
+        # AutomataAgentConfig
+
+        `AutomataAgentConfig` is a configuration class that helps configure, setup, and interact with an `AutomataAgent`. It contains various attributes such as `config_name`, `instruction_payload`, `llm_toolkits`, and others to provide the necessary setup and settings to be used by the agent.
+
+        ## Overview
+
+        `AutomataAgentConfig` provides a way to load the agent configurations specified by the `AgentConfigName`. The configuration options can be set during the instantiation of the class or can be loaded using the `load` classmethod. It provides utility methods to load and setup agent configurations while also validating the provided settings. The class offers a convenient way to create an agent with custom configurations and includes closely related symbols like `AgentConfigName`.
+
+        ## Related Symbols
+
+        - `automata.configs.config_enums.AgentConfigName`
+        - `automata.core.agent.automata_agent.AutomataAgent`
+        - `automata.configs.automata_agent_config_utils.AutomataAgentConfigBuilder`
+        - `automata.core.coordinator.automata_instance.AutomataInstance`
+
+        ## Example
+
+        The following is an example demonstrating how to create an instance of `AutomataAgentConfig` using a predefined configuration name.
+
+        ```python
+        from automata.configs.automata_agent_configs import AutomataAgentConfig
+        from automata.configs.config_enums import AgentConfigName
+
+        config_name = AgentConfigName.AUTOMATA_MAIN_DEV
+        config = AutomataAgentConfig.load(config_name)
+        ```
+
+        ## Limitations
+
+        The primary limitation of `AutomataAgentConfig` is that it relies on the predefined configuration files based on `AgentConfigName`. It can only load configurations from those files and cannot load custom configuration files. In addition, it assumes a specific directory structure for the configuration files.
+
+        ## Follow-up Questions:
+
+        - How can we include custom configuration files for loading into the `AutomataAgentConfig` class?
+        
+        '''
     )
 
     completion = openai.ChatCompletion.create(
@@ -61,9 +111,15 @@ def get_completion(selected_symbol: Symbol, symbol_overview: str):
             {
                 "role": "user",
                 "content": f"Generate the documentation for {selected_symbol.path} using the context shown below -\n {symbol_overview}."
-                f" The outputed documentation should include an overview section, related symbols, examples, limitations."
-                f" Examples should be comprehensive, like in the original Python Library documentation, like so - {example}."
-                f" Do not include the local file hiearchy, that is just for contextual reference.",
+                f" The output documentation should include an overview section, related symbols, examples, and discussion around limitations."
+                f" Examples should be comprehensive and readily executable (e.g. correct imports and values)."
+                f" If there are references to 'Mock' objects in test files from your context, do your best to replace these with the actual underlying object."
+                f" If that is not possible, note this in a footnote. Mock objects are used in testing to simplify working with complex objects."
+                f" For reference, write in the style of in the original Python Library documentation -\n{example_0}"
+                f" For further reference, see the local documentation here -\n{example_1}"
+                f" Some information is just included for contextual reference, and this may be omitted from the output documentation."
+                f" Lastly, if some points are unclear, note these in a footnote that begins with ## Follow-up Questions:"
+                ,
             }
         ],
     )
@@ -72,7 +128,24 @@ def get_completion(selected_symbol: Symbol, symbol_overview: str):
     return completion.choices[0]["message"]["content"]
 
 
-def load_docs(kwargs: Dict[str, Any]) -> Dict[Symbol, Tuple[str, str, str]]:
+
+def get_summary_doc(input_doc: str) -> str:
+    completion = openai.ChatCompletion.create(
+        model="gpt-4",
+        messages=[
+            {
+                "role": "user",
+                "content": f"Condense the documentation below down to one to two concise paragraphs:\n {input_doc}\nIf there is an example, include that in full in the output."
+            }
+        ],
+    )
+    if not completion.choices:
+        return "Error: No completion found"
+    return completion.choices[0]["message"]["content"]
+
+
+
+def load_docs(kwargs: Dict[str, Any]) -> Dict[Symbol, Tuple[str, str, str, str]]:
     doc_path = os.path.join(
         config_path(),
         ConfigCategory.SYMBOLS.value,
@@ -92,7 +165,7 @@ def load_docs(kwargs: Dict[str, Any]) -> Dict[Symbol, Tuple[str, str, str]]:
     return docs
 
 
-def save_docs(kwargs: Dict[str, Any], docs: Dict[Symbol, Tuple[str, str, str]]):
+def save_docs(kwargs: Dict[str, Any], docs: Dict[Symbol, Tuple[str, str, str, str]]):
     doc_path = os.path.join(
         config_path(),
         ConfigCategory.SYMBOLS.value,
@@ -108,7 +181,7 @@ def save_docs(kwargs: Dict[str, Any], docs: Dict[Symbol, Tuple[str, str, str]]):
 def main(*args, **kwargs):
     docs = load_docs(kwargs)
 
-    graph = SymbolGraphFactory().create()
+    graph = SymbolGraphFactory().create(build_caller_relationships=True)
     config = SymbolRankConfig()
     subgraph = graph.get_rankable_symbol_subgraph(
         flow_rank=kwargs.get("rank_direction", "bidirectional")
@@ -133,14 +206,15 @@ def main(*args, **kwargs):
         ):
             print(f"Generating docs for {selected_symbol}")
             abbreviated_selected_symbol = selected_symbol.uri.split("/")[1].split("#")[0]
-            search_results = symbol_searcher.symbol_rank_search(abbreviated_selected_symbol)
+            search_results = symbol_searcher.symbol_rank_search(f"{abbreviated_selected_symbol} conftest fixture")
             search_list = [result[0] for result in search_results]
 
             printer = CodePrinter(graph)
             printer.process_symbol(selected_symbol, search_list)
             symbol_overview = printer.message
-            completion = get_completion(selected_symbol, symbol_overview)
-            docs[selected_symbol] = (raw_code, symbol_overview, completion)
+            completion = get_full_doc_completion(selected_symbol, symbol_overview)
+            completion_summary = get_summary_doc(completion)
+            docs[selected_symbol] = (raw_code, symbol_overview, completion, completion_summary)
             # Save after each iteration to lock in progress (saving is short compared to generating completion)
             save_docs(kwargs, docs)
 
@@ -172,7 +246,7 @@ if __name__ == "__main__":
             help="Selection criteria for symbols.",
         )
         parser.add_argument(
-            "-n", "--top_n_symbols", type=int, default=20, help="Number of top symbols to select."
+            "-n", "--top_n_symbols", type=int, default=5, help="Number of top symbols to select."
         )
         parser.add_argument(
             "-u", "--update_docs", action="store_true", help="Flag to update the docs."

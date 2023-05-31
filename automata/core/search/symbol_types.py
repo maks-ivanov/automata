@@ -16,9 +16,7 @@ PyPath = str
 # Symbol Related Types
 class Descriptor:
     """
-    SCIP produces symbol URI, it identifies a class, method, or a local variable, along with the entire AST path to it.
-    Full spec: https://github.com/sourcegraph/scip/blob/ee677ba3756cdcdb55b39942b5701f0fde9d69fa/docs/scip.md#symbol
-    The classes and functions in this file are used to convert the symbol URI into a human-readable form that can be used to query the index.
+    Wraps the descriptor component of the URI into a python object
     """
 
     ScipSuffix = DescriptorProto
@@ -121,6 +119,46 @@ class Package:
 
 @dataclass
 class Symbol:
+    """
+    Symbol is similar to a URI, it identifies a class, method, or a local variable. SymbolInformation contains rich metadata about symbols such as the docstring.
+
+    Symbol has a standardized string representation, which can be used interchangeably with Symbol. The syntax for Symbol is the following:
+
+    # (<x>)+ stands for one or more repetitions of <x>
+    <symbol>               ::= <scheme> ' ' <package> ' ' (<descriptor>)+ | 'local ' <local-id>
+    <package>              ::= <manager> ' ' <package-name> ' ' <version>
+    <scheme>               ::= any UTF-8, escape spaces with double space.
+    <manager>              ::= same as above, use the placeholder '.' to indicate an empty value
+    <package-name>         ::= same as above
+    <version>              ::= same as above
+    <descriptor>           ::= <namespace> | <type> | <term> | <method> | <type-parameter> | <parameter> | <meta> | <macro>
+    <namespace>            ::= <name> '/'
+    <type>                 ::= <name> '#'
+    <term>                 ::= <name> '.'
+    <meta>                 ::= <name> ':'
+    <macro>                ::= <name> '!'
+    <method>               ::= <name> '(' <method-disambiguator> ').'
+    <type-parameter>       ::= '[' <name> ']'
+    <parameter>            ::= '(' <name> ')'
+    <name>                 ::= <identifier>
+    <method-disambiguator> ::= <simple-identifier>
+    <identifier>           ::= <simple-identifier> | <escaped-identifier>
+    <simple-identifier>    ::= (<identifier-character>)+
+    <identifier-character> ::= '_' | '+' | '-' | '$' | ASCII letter or digit
+    <escaped-identifier>   ::= '`' (<escaped-character>)+ '`'
+    <escaped-characters>   ::= any UTF-8 character, escape backticks with double backtick.  
+
+    Examples -
+    from automata.core.search.symbol_parser import parse_symbol
+
+    symbol_class = parse_symbol(
+        "scip-python python automata 75482692a6fe30c72db516201a6f47d9fb4af065 `automata.core.agent.automata_agent_enums`/ActionIndicator#"
+    )
+
+    symbol_method = parse_symbol(
+        "scip-python python automata 75482692a6fe30c72db516201a6f47d9fb4af065 `automata.core.base.tool`/ToolNotFoundError#__init__()."
+    )
+    """
     uri: str
     scheme: str
     package: Package

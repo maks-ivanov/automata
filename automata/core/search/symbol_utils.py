@@ -39,7 +39,7 @@ def convert_to_fst_object(
                 module_dotpath = module_dotpath[len("automata.") :]  # indexer omits this
             obj = module_map.get_module(module_dotpath)
             # TODO - Understand why some modules might be None
-            if not obj or "test" in top_descriptor.name:
+            if not obj:
                 raise ValueError(f"Module descriptor {top_descriptor.name} not found")
         elif (
             Descriptor.convert_scip_to_python_suffix(top_descriptor.suffix)

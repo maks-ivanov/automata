@@ -111,7 +111,6 @@ class SymbolEmbeddingMap:
                 map_symbol = desc_to_full_symbol.get(symbol_desc_identifier, None)
 
                 if not map_symbol:
-                    logger.info("Adding a new symbol: %s" % symbol)
                     symbol_embedding = self.embedding_provider.get_embedding(symbol_source)
                     self.embedding_dict[symbol] = SymbolEmbedding(
                         symbol=symbol, vector=symbol_embedding, source_code=symbol_source
@@ -120,7 +119,6 @@ class SymbolEmbeddingMap:
                     # If the symbol is already in the embedding map, check if the source code is the same
                     # If not, we can update the embedding
                     if self.embedding_dict[map_symbol].source_code != symbol_source:
-                        logger.info("Modifying existing embedding for symbol: %s" % symbol)
                         symbol_embedding = self.embedding_provider.get_embedding(symbol_source)
                         self.embedding_dict[symbol] = SymbolEmbedding(
                             symbol=symbol, vector=symbol_embedding, source_code=symbol_source
@@ -135,7 +133,7 @@ class SymbolEmbeddingMap:
                     else:
                         pass
             except Exception as e:
-                if "test" not in symbol.uri and "local" not in symbol.uri:
+                if "local" not in symbol.uri:
                     logger.error("Updating embedding for symbol: %s failed with %s" % (symbol, e))
 
     def filter_embedding_map(self, selected_symbols: List[Symbol]):

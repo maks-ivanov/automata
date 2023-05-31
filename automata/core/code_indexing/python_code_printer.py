@@ -19,7 +19,7 @@ class CodePrinterConfig:
         spacer: str = "  ",
         max_dependency_print_depth: int = 2,
         max_recursion_depth: int = 1,
-        nearest_symbols_count: int = 5,
+        nearest_symbols_count: int = 10,
     ):
         self.spacer = spacer
         self.nearest_symbols_count = nearest_symbols_count
@@ -61,8 +61,8 @@ class CodePrinter:
         ranked_symbols: List[Symbol] = [],
     ) -> None:
         self.obs_symbols.add(symbol)
-        if self._is_top_level():
-            self.print_directory_structure(symbol)
+        # if self._is_top_level():
+        #     self.print_directory_structure(symbol)
         self.process_headline(symbol)
         if self.indent_level <= self.config.max_dependency_print_depth:  # self._is_top_level():
             with self.IndentManager():
@@ -70,11 +70,12 @@ class CodePrinter:
                 if self.indent_level <= self.config.max_recursion_depth:
                     self.process_dependencies(symbol)
                     self.process_nearest_symbols(ranked_symbols)
+                    # self.process_references(symbol)
                     self.process_callers(symbol)
 
     def process_headline(self, symbol: Symbol) -> None:
         if self._is_top_level():
-            self.process_message(f"Processing Symbol -\n{symbol.path} -\n")
+            self.process_message(f"Context for -\n{symbol.path} -\n")
         else:
             self.process_message(f"{symbol.path}\n")
 
@@ -85,7 +86,7 @@ class CodePrinter:
             dir_path = os.path.join(root_py_path(), "..", symbol_path)
             while not os.path.isdir(dir_path):
                 dir_path = os.path.dirname(dir_path)
-            overview = build_repository_overview(dir_path)
+            overview = build_repository_overview(dir_path, skip_func=True)
             self.process_message(f"{overview}\n")
 
     def process_class(self, symbol: Symbol) -> None:
@@ -114,6 +115,22 @@ class CodePrinter:
             with self.IndentManager():
                 for method in methods:
                     self.process_method(method)
+        docstring = CodePrinter._get_docstring(ast_object)
+
+        # # Fetch and print import statements
+        # self.process_message("Import Statements:")
+        # with self.IndentManager():
+        #     imports = ast_object.find_all('ImportNode')
+        #     from_imports = ast_object.find_all('FromImportNode')
+        #     for import_node in imports + from_imports:
+        #         self.process_message(str(import_node.dumps()))
+        #     self.process_message("")  # Add an empty line for separation
+
+        if docstring:
+            self.process_message("Class Docstring:")
+            with self.IndentManager():
+                self.process_message(docstring)
+                self.process_message("")  # Add an empty line for separation
 
         process_variables(ast_object)
         process_methods(ast_object)
@@ -168,6 +185,9 @@ class CodePrinter:
                 return find_method_call_by_location(module, line_number, column_number)
 
             for caller in all_potential_callers:
+                if "test" in str(caller.symbol.path):
+                    continue
+                
                 call = find_call(caller)
                 if call is None:
                     continue
@@ -189,12 +209,33 @@ class CodePrinter:
         search_list: List[Symbol],
     ) -> None:
         self.process_message("Closely Related Symbols:")
+
+        def bespoke_test_handler(test_symbol) -> bool:
+            try:
+                ast_object = convert_to_fst_object(test_symbol)
+            except Exception as e:
+                print(f"Error {e} while converting symbol {test_symbol.descriptors[-1].name}.")
+                return False
+            with self.IndentManager():
+                self.process_headline(test_symbol)
+                with self.IndentManager():
+                    self.process_message(ast_object.dumps())
+            return True
+
         with self.IndentManager():
             if len(search_list) > 0:
                 printed_nearby_symbols = 0
                 for ranked_symbol in search_list:
                     if printed_nearby_symbols >= self.config.nearest_symbols_count:
                         break
+                    # Bespoke handling for test class
+                    if 'test' in str(ranked_symbol.path):
+                        result = bespoke_test_handler(ranked_symbol)
+                        if result == True:
+                            printed_nearby_symbols += 1
+                        else:
+                            continue
+
                     if ranked_symbol.symbol_kind_by_suffix() != Descriptor.PythonKinds.Class:
                         continue
                     elif ranked_symbol in self.obs_symbols:
@@ -202,6 +243,16 @@ class CodePrinter:
                     else:
                         printed_nearby_symbols += 1
                         self.process_symbol(ranked_symbol)
+
+    def process_references(self, symbol: Symbol) -> None:
+        self.process_message("References:")
+        with self.IndentManager():
+            references = self.graph.get_references_to_symbol(symbol)
+            for file_path, symbol_references in references.items():
+                self.process_message(f"File: {file_path}")
+                # with self.IndentManager():
+                #     for ref in symbol_references:
+                #         self.process_message(f"Line: {ref.line_number}, Column: {ref.column_number}")
 
     def _is_top_level(self) -> bool:
         return self.indent_level == 0

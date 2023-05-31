@@ -328,7 +328,7 @@ class _SymbolGraphNavigator:
 
 
 class SymbolGraph:
-    def __init__(self, index_path: str):
+    def __init__(self, index_path: str, build_caller_relationships: bool = False):
         """
         Initializes SymbolGraph with the path of an index protobuf file.
 
@@ -338,7 +338,7 @@ class SymbolGraph:
             SymbolGraph instance
         """
         index = self._load_index_protobuf(index_path)
-        builder = GraphBuilder(index)
+        builder = GraphBuilder(index, build_caller_relationships)
         self._graph = builder.build_graph()
         self.navigator = _SymbolGraphNavigator(self._graph)
 

@@ -11,7 +11,7 @@ def convert_fpath_to_module_dotpath(root_abs_path, module_path):
     return module_rel_path
 
 
-def build_repository_overview(path: str, skip_test: bool = True) -> str:
+def build_repository_overview(path: str, skip_test: bool = True, skip_func = False) -> str:
     """
     Loops over the directory python files and returns a string that provides an overview of the PythonParser's state.
     Returns:
@@ -19,7 +19,6 @@ def build_repository_overview(path: str, skip_test: bool = True) -> str:
     **NOTE: This method uses AST, not RedBaron, because RedBaron initialization is slow and unnecessary for this method.
     """
     result_lines = []
-
     for root, _, files in os.walk(path):
         for file in files:
             if "test" in file and skip_test:
@@ -29,15 +28,15 @@ def build_repository_overview(path: str, skip_test: bool = True) -> str:
                 module = ast.parse(open(module_path).read())
                 relative_module_path = convert_fpath_to_module_dotpath(path, module_path)
                 result_lines.append(relative_module_path)
-                _overview_traverse_helper(module, result_lines)
+                _overview_traverse_helper(module, result_lines, skip_func)
     return "\n".join(result_lines)
 
 
-def _overview_traverse_helper(node, line_items, num_spaces=1):
+def _overview_traverse_helper(node, line_items, skip_func = False, num_spaces=1):
     if isinstance(node, ClassDef):
         line_items.append("  " * num_spaces + " - cls " + node.name)
-    elif isinstance(node, FunctionDef) or isinstance(node, AsyncFunctionDef):
+    elif (isinstance(node, FunctionDef) or isinstance(node, AsyncFunctionDef)) and not skip_func:
         line_items.append("  " * num_spaces + " - func " + node.name)
 
     for child in ast.iter_child_nodes(node):
-        _overview_traverse_helper(child, line_items, num_spaces + 1)
+        _overview_traverse_helper(child, line_items, skip_func, num_spaces + 1)

@@ -18,7 +18,7 @@ class SymbolFactory:
 
 
 class SymbolGraphFactory(SymbolFactory):
-    def create(self, index_path: Optional[str] = None) -> SymbolGraph:
+    def create(self, index_path: Optional[str] = None, build_caller_relationships: bool = False) -> SymbolGraph:
         """
         Creates a SymbolGraph object.
 
@@ -27,7 +27,7 @@ class SymbolGraphFactory(SymbolFactory):
         """
         if not index_path:
             index_path = os.path.join(config_path(), ConfigCategory.SYMBOLS.value, "index.scip")
-        return SymbolGraph(index_path)
+        return SymbolGraph(index_path, build_caller_relationships)
 
 
 class SymbolEmbeddingMapFactory(SymbolFactory):
