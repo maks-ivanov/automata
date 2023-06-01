@@ -66,7 +66,7 @@ def get_full_doc_completion(selected_symbol: Symbol, symbol_overview: str) -> st
     )
 
     example_1 = textwrap.dedent(
-        '''
+        """
         # AutomataAgentConfig
 
         `AutomataAgentConfig` is a configuration class that helps configure, setup, and interact with an `AutomataAgent`. It contains various attributes such as `config_name`, `instruction_payload`, `llm_toolkits`, and others to provide the necessary setup and settings to be used by the agent.
@@ -102,7 +102,7 @@ def get_full_doc_completion(selected_symbol: Symbol, symbol_overview: str) -> st
 
         - How can we include custom configuration files for loading into the `AutomataAgentConfig` class?
         
-        '''
+        """
     )
 
     completion = openai.ChatCompletion.create(
@@ -118,15 +118,13 @@ def get_full_doc_completion(selected_symbol: Symbol, symbol_overview: str) -> st
                 f" For reference, write in the style of in the original Python Library documentation -\n{example_0}"
                 f" For further reference, see the local documentation here -\n{example_1}"
                 f" Some information is just included for contextual reference, and this may be omitted from the output documentation."
-                f" Lastly, if some points are unclear, note these in a footnote that begins with ## Follow-up Questions:"
-                ,
+                f" Lastly, if some points are unclear, note these in a footnote that begins with ## Follow-up Questions:",
             }
         ],
     )
     if not completion.choices:
         return "Error: No completion found"
     return completion.choices[0]["message"]["content"]
-
 
 
 def get_summary_doc(input_doc: str) -> str:
@@ -135,14 +133,13 @@ def get_summary_doc(input_doc: str) -> str:
         messages=[
             {
                 "role": "user",
-                "content": f"Condense the documentation below down to one to two concise paragraphs:\n {input_doc}\nIf there is an example, include that in full in the output."
+                "content": f"Condense the documentation below down to one to two concise paragraphs:\n {input_doc}\nIf there is an example, include that in full in the output.",
             }
         ],
     )
     if not completion.choices:
         return "Error: No completion found"
     return completion.choices[0]["message"]["content"]
-
 
 
 def load_docs(kwargs: Dict[str, Any]) -> Dict[Symbol, Tuple[str, str, str, str]]:
@@ -206,8 +203,22 @@ def main(*args, **kwargs):
         ):
             print(f"Generating docs for {selected_symbol}")
             abbreviated_selected_symbol = selected_symbol.uri.split("/")[1].split("#")[0]
-            search_results = symbol_searcher.symbol_rank_search(f"{abbreviated_selected_symbol} conftest fixture")
-            search_list = [result[0] for result in search_results]
+            # search_results = symbol_searcher.symbol_rank_search(f"{abbreviated_selected_symbol} conftest fixture")
+            # search_list = [result[0] for result in search_results]
+
+            # Splice the search results for the symbol with the symbol biased on tests
+            search_results_0 = symbol_searcher.symbol_rank_search(f"{abbreviated_selected_symbol}")
+            search_results_1 = symbol_searcher.symbol_rank_search(
+                f"{abbreviated_selected_symbol} tests or conftest"
+            )
+
+            search_list = []
+            for i in range(len(search_results_0)):
+                set_list = set(search_list)
+                if search_results_0[i] not in set_list:
+                    search_list.append(search_results_0[i][0])
+                elif search_results_1[i] not in set_list:
+                    search_list.append(search_results_1[i][0])
 
             printer = CodePrinter(graph)
             printer.process_symbol(selected_symbol, search_list)

@@ -146,7 +146,7 @@ class Symbol:
     <simple-identifier>    ::= (<identifier-character>)+
     <identifier-character> ::= '_' | '+' | '-' | '$' | ASCII letter or digit
     <escaped-identifier>   ::= '`' (<escaped-character>)+ '`'
-    <escaped-characters>   ::= any UTF-8 character, escape backticks with double backtick.  
+    <escaped-characters>   ::= any UTF-8 character, escape backticks with double backtick.
 
     Examples -
     from automata.core.search.symbol_parser import parse_symbol
@@ -159,6 +159,7 @@ class Symbol:
         "scip-python python automata 75482692a6fe30c72db516201a6f47d9fb4af065 `automata.core.base.tool`/ToolNotFoundError#__init__()."
     )
     """
+
     uri: str
     scheme: str
     package: Package

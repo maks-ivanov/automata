@@ -11,7 +11,7 @@ def convert_fpath_to_module_dotpath(root_abs_path, module_path):
     return module_rel_path
 
 
-def build_repository_overview(path: str, skip_test: bool = True, skip_func = False) -> str:
+def build_repository_overview(path: str, skip_test: bool = True, skip_func=False) -> str:
     """
     Loops over the directory python files and returns a string that provides an overview of the PythonParser's state.
     Returns:
@@ -32,7 +32,7 @@ def build_repository_overview(path: str, skip_test: bool = True, skip_func = Fal
     return "\n".join(result_lines)
 
 
-def _overview_traverse_helper(node, line_items, skip_func = False, num_spaces=1):
+def _overview_traverse_helper(node, line_items, skip_func=False, num_spaces=1):
     if isinstance(node, ClassDef):
         line_items.append("  " * num_spaces + " - cls " + node.name)
     elif (isinstance(node, FunctionDef) or isinstance(node, AsyncFunctionDef)) and not skip_func:

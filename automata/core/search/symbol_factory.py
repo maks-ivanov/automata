@@ -18,7 +18,9 @@ class SymbolFactory:
 
 
 class SymbolGraphFactory(SymbolFactory):
-    def create(self, index_path: Optional[str] = None, build_caller_relationships: bool = False) -> SymbolGraph:
+    def create(
+        self, index_path: Optional[str] = None, build_caller_relationships: bool = False
+    ) -> SymbolGraph:
         """
         Creates a SymbolGraph object.
 
