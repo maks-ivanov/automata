@@ -54,13 +54,10 @@ def load_config(
     Returns:
         Any: The content of the YAML file as a Python object.
     """
-    with open(
-        os.path.join(config_path(), config_name, f"{file_name}.{config_type}"),
-        "r",
-    ) as file:
+    with open(os.path.join(config_path(), config_name, f'{file_name}.{config_type}'), 'r', encoding='utf-8') as file:
         if config_type == "yaml":
             return yaml.safe_load(file)
-        elif config_type == "json":
+        if config_type == "json":
             samples_json_string = file.read()
             return json.loads(samples_json_string, object_hook=custom_decoder)
 

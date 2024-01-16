@@ -141,11 +141,10 @@ class AutomataTask(Task):
             )
 
             return agent_manager
-        else:
-            return AutomataManagerFactory.create_manager(
-                AutomataAgentFactory.create_agent(instructions=instructions, config=main_config),
-                {},
-            )
+        return AutomataManagerFactory.create_manager(
+            AutomataAgentFactory.create_agent(instructions=instructions, config=main_config),
+            {},
+        )
 
     def validate_initialization(self):
         """
@@ -167,20 +166,7 @@ class AutomataTask(Task):
         Returns a JSON representation of key attributes of the task.
         """
 
-        result = {
-            "task_id": str(self.task_id),
-            "status": self.status.value,
-            "priority": self.priority,
-            "max_retries": self.max_retries,
-            "retry_count": self.retry_count,
-            "path_to_root_py": self.path_to_root_py,
-            "result": self.result,
-            "error": self.error,
-        }
-        result["model"] = self.kwargs.get("model", "gpt-4")
-        result["llm_toolkits"] = self.kwargs.get("llm_toolkits", "").split(",")
-        result["instructions"] = self.kwargs.get("instructions", None)
-        result["instruction_payload"] = self.kwargs.get("instruction_payload", None)
+        result = {"task_id": str(self.task_id), "status": self.status.value, "priority": self.priority, "max_retries": self.max_retries, "retry_count": self.retry_count, "path_to_root_py": self.path_to_root_py, "result": self.result, "error": self.error, "model": self.kwargs.get("model", "gpt-4"), "llm_toolkits": self.kwargs.get("llm_toolkits", "").split(","), "instructions": self.kwargs.get("instructions", None), "instruction_payload": self.kwargs.get("instruction_payload", None)}
         main_config = self.kwargs.get("main_config", None)
         if main_config:
             result["main_config"] = main_config.config_name.value
@@ -219,8 +205,7 @@ class AutomataTask(Task):
         log_file = os.path.join(log_dir, Task.TASK_LOG_NAME.replace("TASK_ID", str(self.task_id)))
 
         if os.path.exists(log_file):
-            with open(log_file, "r") as f:
+            with open(log_file, 'r', encoding='utf-8') as f:
                 log_content = f.read()
             return log_content
-        else:
-            raise FileNotFoundError(f"Log file {log_file} not found.")
+        raise FileNotFoundError(f"Log file {log_file} not found.")

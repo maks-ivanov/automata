@@ -31,7 +31,7 @@ class PythonCodeRetrieverToolManager(BaseToolManager):
         )
         self.model = kwargs.get("model") or "gpt-4"
         self.temperature = kwargs.get("temperature") or 0.7
-        self.verbose = kwargs.get("verbose") or False
+        self.verbose = kwargs.get("verbose")
         self.stream = kwargs.get("stream") or True
 
     def build_tools(self) -> List[Tool]:

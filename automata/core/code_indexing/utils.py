@@ -36,7 +36,7 @@ def build_repository_overview(path: str, skip_test: bool = True) -> str:
 def _overview_traverse_helper(node, line_items, num_spaces=1):
     if isinstance(node, ClassDef):
         line_items.append("  " * num_spaces + " - cls " + node.name)
-    elif isinstance(node, FunctionDef) or isinstance(node, AsyncFunctionDef):
+    elif isinstance(node, (AsyncFunctionDef, FunctionDef)):
         line_items.append("  " * num_spaces + " - func " + node.name)
 
     for child in ast.iter_child_nodes(node):

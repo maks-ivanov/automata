@@ -12,7 +12,7 @@ class CoverageToolManager(BaseToolManager):
         self.coverage_processor = CoverageProcessor(coverage_analyzer, do_create_issue=True)
         self.model = kwargs.get("model") or "gpt-4"
         self.temperature = kwargs.get("temperature") or 0.7
-        self.verbose = kwargs.get("verbose") or False
+        self.verbose = kwargs.get("verbose")
         self.stream = kwargs.get("stream") or True
 
     def _run_list_coverage_gaps(self, input_module):

@@ -51,7 +51,7 @@ def _find_subnode(code_obj: RedBaron, obj_name: str) -> Optional[Union[DefNode, 
     Returns:
         Optional[Union[DefNode, ClassNode]]: The found node, or None.
     """
-    return code_obj.find(lambda identifier: identifier in ("def", "class"), name=obj_name)
+    return code_obj.find(lambda identifier: identifier in {"def", "class"}, name=obj_name)
 
 
 def find_import_syntax_tree_nodes(module: RedBaron) -> Optional[NodeList]:
@@ -64,7 +64,7 @@ def find_import_syntax_tree_nodes(module: RedBaron) -> Optional[NodeList]:
     Returns:
         Optional[NodeList]: A list of ImportNode and FromImportNode objects.
     """
-    return module.find_all(lambda identifier: identifier in ("import", "from_import"))
+    return module.find_all(lambda identifier: identifier in {"import", "from_import"})
 
 
 def find_import_syntax_tree_node_by_name(
@@ -81,7 +81,7 @@ def find_import_syntax_tree_node_by_name(
         Optional[Union[ImportNode, FromImportNode]]: The found import, or None if not found.
     """
     return module.find(
-        lambda identifier: identifier in ("import", "from_import"), name=import_name
+        lambda identifier: identifier in {"import", "from_import"}, name=import_name
     )
 
 
@@ -95,4 +95,4 @@ def find_all_function_and_class_syntax_tree_nodes(module: RedBaron) -> NodeList:
     Returns:
         NodeList: A list of ClassNode and DefNode objects.
     """
-    return module.find_all(lambda identifier: identifier in ("class", "def"))
+    return module.find_all(lambda identifier: identifier in {"class", "def"})

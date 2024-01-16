@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 
 def read_requirements():
-    with open("requirements.txt", "r") as req_file:
+    with open('requirements.txt', 'r', encoding='utf-8') as req_file:
         return req_file.readlines()
 
 

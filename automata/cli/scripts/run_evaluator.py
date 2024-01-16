@@ -20,7 +20,7 @@ def evaluator_decoder(
         return EvalAction(
             ToolAction(dct["tool_name"], dct["tool_query"], dct["tool_args"]), dct["check_tokens"]  # type: ignore
         )
-    elif "result_name" in dct:
+    if "result_name" in dct:
         return EvalAction(
             ResultAction(dct["result_name"], dct["result_outputs"]), dct["check_tokens"]  # type: ignore
         )

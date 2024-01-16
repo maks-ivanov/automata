@@ -27,7 +27,7 @@ class AutomataCoordinator:
             ValueError: If an agent with the same config_name already exists in the list.
         """
         # Check agent has not already been added via name field
-        if agent_instance.config_name in [ele.config_name for ele in self.agent_instances]:
+        if agent_instance.config_name in (ele.config_name for ele in self.agent_instances):
             raise ValueError("Agent already exists.")
         self.agent_instances.append(agent_instance)
 

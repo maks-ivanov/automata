@@ -105,7 +105,7 @@ def test_config_loading_different_versions():
     for config_name in AgentConfigName:
         if config_name == AgentConfigName.DEFAULT:
             continue
-        elif config_name == AgentConfigName.AUTOMATA_INITIALIZER:
+        if config_name == AgentConfigName.AUTOMATA_INITIALIZER:
             continue
         main_config = AutomataAgentConfig.load(config_name)
         assert isinstance(main_config, AutomataAgentConfig)

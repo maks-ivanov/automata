@@ -133,14 +133,14 @@ def sync_graph_and_dict(
     """
 
     # Use list() to create a copy of the node list, as you can't modify a list while iterating over it
-    for node in list(graph.nodes()):
+    for node in graph.nodes():
         if node not in dictionary:
             graph.remove_node(node)
 
     # Again, use list() to create a copy of the key list
-    for key in list(dictionary.keys()):
+    for (key, dictionary_key) in dictionary.items():
         if key not in graph:
-            del dictionary[key]
+            del dictionary_key
 
     return graph, dictionary
 
@@ -175,7 +175,5 @@ def transform_dict_values(dictionary: Dict[Any, float], func: Callable[[List[flo
     transformed_values = func([dictionary[key] for key in dictionary])
 
     # Re-distribute the transformed values back into the dictionary
-    transformed_dict = {}
-    for i, key in enumerate(dictionary):
-        transformed_dict[key] = transformed_values[i]
+    transformed_dict = {key: transformed_values[i] for (i, key) in enumerate(dictionary)}
     return transformed_dict

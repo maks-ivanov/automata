@@ -118,10 +118,7 @@ class SymbolGraph:
             List[SymbolReference]: List of symbol references
         """
         reference_edges_in_module = self._graph.in_edges(module_name, data=True)
-        result = []
-        for _, __, data in reference_edges_in_module:
-            if data["label"] == "reference":
-                result.append(data.get("symbol_reference"))
+        result = [data.get("symbol_reference") for (_, __, data) in reference_edges_in_module if data["label"] == "reference"]
 
         return result
 
@@ -302,7 +299,7 @@ class SymbolGraph:
         # TODO: Consider implications of using list instead of set
         """
         references_in_range = self._get_symbol_references_in_scope(symbol)
-        symbols_in_range = set([ref.symbol for ref in references_in_range])
+        symbols_in_range = {ref.symbol for ref in references_in_range}
         return symbols_in_range
 
     def _get_symbol_references_in_scope(self, symbol: Symbol) -> List[SymbolReference]:
@@ -345,13 +342,7 @@ class SymbolGraph:
 
         # TODO: Consider implications of using list instead of set
         """
-        related_symbol_nodes = set(
-            [
-                target
-                for _, target, data in self._graph.out_edges(symbol, data=True)
-                if data.get("label") == "relationship"
-            ]
-        )
+        related_symbol_nodes = {target for (_, target, data) in self._graph.out_edges(symbol, data=True) if data.get("label") == "relationship"}
         return related_symbol_nodes
 
     @staticmethod
@@ -364,10 +355,7 @@ class SymbolGraph:
         Returns:
             Dict[str, bool]: A dictionary of symbol roles
         """
-        result = {}
-        for role_name, role_value in SymbolRole.items():
-            if (role & role_value) > 0:
-                result[role_name] = (role & role_value) > 0
+        result = {role_name: role & role_value > 0 for (role_name, role_value) in SymbolRole.items() if role & role_value > 0}
         return result
 
     @staticmethod

@@ -49,36 +49,35 @@ class SymbolParser:
             descriptor = Descriptor(name, Descriptor.ScipSuffix.Parameter)
             self.accept_character(")", "closing parameter name")
             return descriptor
-        elif next_char == "[":
+        if next_char == "[":
             self.index += 1
             name = self.accept_identifier("type parameter name")
             descriptor = Descriptor(name, Descriptor.ScipSuffix.TypeParameter)
             self.accept_character("]", "closing type parameter name")
             return descriptor
-        else:
-            name = self.accept_identifier("descriptor name")
-            suffix = self.current()
-            self.index += 1
-            if suffix == "(":
-                disambiguator = ""
-                if self.current() != ")":
-                    disambiguator = self.accept_identifier("method disambiguator")
-                descriptor = Descriptor(name, Descriptor.ScipSuffix.Method, disambiguator)
-                self.accept_character(")", "closing method")
-                self.accept_character(".", "closing method")
-                return descriptor
-            elif suffix == "/":
-                return Descriptor(name, Descriptor.ScipSuffix.Namespace)
-            elif suffix == ".":
-                return Descriptor(name, Descriptor.ScipSuffix.Term)
-            elif suffix == "#":
-                return Descriptor(name, Descriptor.ScipSuffix.Type)
-            elif suffix == ":":
-                return Descriptor(name, Descriptor.ScipSuffix.Meta)
-            elif suffix == "!":
-                return Descriptor(name, Descriptor.ScipSuffix.Macro)
-            else:
-                raise self.error("Expected a descriptor suffix")
+
+        name = self.accept_identifier("descriptor name")
+        suffix = self.current()
+        self.index += 1
+        if suffix == "(":
+            disambiguator = ""
+            if self.current() != ")":
+                disambiguator = self.accept_identifier("method disambiguator")
+            descriptor = Descriptor(name, Descriptor.ScipSuffix.Method, disambiguator)
+            self.accept_character(")", "closing method")
+            self.accept_character(".", "closing method")
+            return descriptor
+        if suffix == "/":
+            return Descriptor(name, Descriptor.ScipSuffix.Namespace)
+        if suffix == ".":
+            return Descriptor(name, Descriptor.ScipSuffix.Term)
+        if suffix == "#":
+            return Descriptor(name, Descriptor.ScipSuffix.Type)
+        if suffix == ":":
+            return Descriptor(name, Descriptor.ScipSuffix.Meta)
+        if suffix == "!":
+            return Descriptor(name, Descriptor.ScipSuffix.Macro)
+        raise self.error("Expected a descriptor suffix")
 
     def accept_identifier(self, what: str) -> str:
         if self.current() == "`":
@@ -124,7 +123,7 @@ class SymbolParser:
 
     @staticmethod
     def is_identifier_character(c: str) -> bool:
-        return c.isalpha() or c.isdigit() or c in ["-", "+", "$", "_"]
+        return c.isalpha() or c.isdigit() or c in {"-", "+", "$", '_'}
 
 
 def parse_symbol(symbol_uri: str, include_descriptors: bool = True) -> Symbol:
@@ -156,7 +155,7 @@ def new_local_symbol(symbol: str, id: str) -> Symbol:
         symbol,
         "local",
         Package("", "", ""),
-        tuple([Descriptor(id, Descriptor.ScipSuffix.Local)]),
+        (Descriptor(id, Descriptor.ScipSuffix.Local),),
     )
 
 

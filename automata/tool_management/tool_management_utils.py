@@ -30,7 +30,7 @@ class ToolManagerFactory:
             return PythonCodeRetrieverToolManager(
                 python_retriever=ToolManagerFactory._retriever_instance
             )
-        elif toolkit_type == ToolkitType.PYTHON_WRITER:
+        if toolkit_type == ToolkitType.PYTHON_WRITER:
             if ToolManagerFactory._retriever_instance is None:
                 ToolManagerFactory._retriever_instance = PythonCodeRetriever()
 
@@ -40,12 +40,12 @@ class ToolManagerFactory:
             return PythonWriterToolManager(
                 python_writer=PythonWriter(ToolManagerFactory._retriever_instance)
             )
-        elif toolkit_type == ToolkitType.COVERAGE_PROCESSOR:
+        if toolkit_type == ToolkitType.COVERAGE_PROCESSOR:
             CoverageToolManager = importlib.import_module(
                 "automata.tool_management.coverage_tool_manager"
             ).CoverageToolManager
             return CoverageToolManager()
-        elif toolkit_type == ToolkitType.SYMBOL_SEARCHER:
+        if toolkit_type == ToolkitType.SYMBOL_SEARCHER:
             SymbolSearcherToolManager = importlib.import_module(
                 "automata.tool_management.symbol_searcher_tool_manager"
             ).SymbolSearcherToolManager
@@ -54,8 +54,7 @@ class ToolManagerFactory:
                     index_name="index.scip", symbol_embedding_name="symbol_embedding.json"
                 )
             )
-        else:
-            raise ValueError("Unknown toolkit type: %s" % toolkit_type)
+        raise ValueError("Unknown toolkit type: %s" % toolkit_type)
 
 
 class ToolkitBuilder:

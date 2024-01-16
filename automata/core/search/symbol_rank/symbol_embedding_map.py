@@ -165,7 +165,7 @@ class SymbolEmbeddingMap:
         # Raise error if the file already exists
         if os.path.exists(output_embedding_path) and not overwrite:
             raise ValueError("output_embedding_path must be a path to a non-existing file.")
-        with open(output_embedding_path, "w") as f:
+        with open(output_embedding_path, 'w', encoding='utf-8') as f:
             encoded_embedding = jsonpickle.encode(self.embedding_dict)
             f.write(encoded_embedding)
 
@@ -181,7 +181,7 @@ class SymbolEmbeddingMap:
             raise ValueError("input_embedding_path must be a path to an existing file.")
 
         embedding_dict = {}
-        with open(input_embedding_path, "r") as f:
+        with open(input_embedding_path, 'r', encoding='utf-8') as f:
             embedding_map_str_keys = jsonpickle.decode(f.read())
             embedding_dict = {
                 Symbol.from_string(key): value for key, value in embedding_map_str_keys.items()

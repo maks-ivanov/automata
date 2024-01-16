@@ -51,7 +51,7 @@ def main(*args, **kwargs):
             symbol_embedding.save(embedding_path, overwrite=True)
         return "Success"
 
-    elif kwargs.get("query_embedding"):
+    if kwargs.get("query_embedding"):
         symbol_graph = SymbolGraph(scip_path)
         symbol_embedding = SymbolEmbeddingMap(
             load_embedding_map=True,
