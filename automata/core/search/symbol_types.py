@@ -49,20 +49,19 @@ class Descriptor:
         escaped_name = Descriptor.get_escaped_name(self.name)
         if self.suffix == Descriptor.ScipSuffix.Namespace:
             return f"{escaped_name}/"
-        elif self.suffix == Descriptor.ScipSuffix.Type:
+        if self.suffix == Descriptor.ScipSuffix.Type:
             return f"{escaped_name}#"
-        elif self.suffix == Descriptor.ScipSuffix.Term:
+        if self.suffix == Descriptor.ScipSuffix.Term:
             return f"{escaped_name}."
-        elif self.suffix == Descriptor.ScipSuffix.Meta:
+        if self.suffix == Descriptor.ScipSuffix.Meta:
             return f"{escaped_name}:"
-        elif self.suffix == Descriptor.ScipSuffix.Method:
+        if self.suffix == Descriptor.ScipSuffix.Method:
             return f"{escaped_name}({self.disambiguator})."
-        elif self.suffix == Descriptor.ScipSuffix.Parameter:
+        if self.suffix == Descriptor.ScipSuffix.Parameter:
             return f"({escaped_name})"
-        elif self.suffix == Descriptor.ScipSuffix.TypeParameter:
+        if self.suffix == Descriptor.ScipSuffix.TypeParameter:
             return f"[{escaped_name}]"
-        else:
-            raise ValueError(f"Invalid descriptor suffix: {self.suffix}")
+        raise ValueError(f"Invalid descriptor suffix: {self.suffix}")
 
     @staticmethod
     def get_escaped_name(name):
@@ -80,29 +79,28 @@ class Descriptor:
         if descriptor_suffix == Descriptor.ScipSuffix.Local:
             return Descriptor.PythonKinds.Local
 
-        elif descriptor_suffix == Descriptor.ScipSuffix.Namespace:
+        if descriptor_suffix == Descriptor.ScipSuffix.Namespace:
             return Descriptor.PythonKinds.Module
 
-        elif descriptor_suffix == Descriptor.ScipSuffix.Type:
+        if descriptor_suffix == Descriptor.ScipSuffix.Type:
             return Descriptor.PythonKinds.Class
 
-        elif descriptor_suffix == Descriptor.ScipSuffix.Method:
+        if descriptor_suffix == Descriptor.ScipSuffix.Method:
             return Descriptor.PythonKinds.Method
 
-        elif descriptor_suffix == Descriptor.ScipSuffix.Term:
+        if descriptor_suffix == Descriptor.ScipSuffix.Term:
             return Descriptor.PythonKinds.Value
 
-        elif descriptor_suffix == Descriptor.ScipSuffix.Macro:
+        if descriptor_suffix == Descriptor.ScipSuffix.Macro:
             return Descriptor.PythonKinds.Macro
 
-        elif descriptor_suffix == Descriptor.ScipSuffix.Parameter:
+        if descriptor_suffix == Descriptor.ScipSuffix.Parameter:
             return Descriptor.PythonKinds.Parameter
 
-        elif descriptor_suffix == Descriptor.ScipSuffix.TypeParameter:
+        if descriptor_suffix == Descriptor.ScipSuffix.TypeParameter:
             return Descriptor.PythonKinds.TypeParameter
 
-        else:
-            return Descriptor.PythonKinds.Meta
+        return Descriptor.PythonKinds.Meta
 
 
 @dataclass
@@ -135,7 +133,7 @@ class Symbol:
     def __eq__(self, other):
         if isinstance(other, Symbol):
             return self.uri == other.uri
-        elif isinstance(other, str):
+        if isinstance(other, str):
             return self.uri == other
         return False
 
@@ -147,20 +145,19 @@ class Symbol:
             return Descriptor.ScipSuffix.Local
         if self.uri.endswith("/"):
             return Descriptor.ScipSuffix.Namespace
-        elif self.uri.endswith("#"):
+        if self.uri.endswith("#"):
             return Descriptor.ScipSuffix.Type
-        elif self.uri.endswith(")."):
+        if self.uri.endswith(")."):
             return Descriptor.ScipSuffix.Method
-        elif self.uri.endswith("."):
+        if self.uri.endswith("."):
             return Descriptor.ScipSuffix.Term
-        elif self.uri.endswith(":"):
+        if self.uri.endswith(":"):
             return Descriptor.ScipSuffix.Meta
-        elif self.uri.endswith(")"):
+        if self.uri.endswith(")"):
             return Descriptor.ScipSuffix.Parameter
-        elif self.uri.endswith("]"):
+        if self.uri.endswith("]"):
             return Descriptor.ScipSuffix.TypeParameter
-        else:
-            raise ValueError(f"Invalid descriptor suffix: {self.uri}")
+        raise ValueError(f"Invalid descriptor suffix: {self.uri}")
 
     def parent(self) -> "Symbol":
         parent_descriptors = list(self.descriptors)[:-1]
@@ -232,6 +229,6 @@ class File:
     def __eq__(self, other):
         if isinstance(other, File):
             return self.path == other.path
-        elif isinstance(other, str):
+        if isinstance(other, str):
             return self.path == other
         return False

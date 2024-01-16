@@ -65,7 +65,7 @@ def cleanup_and_check(expected_content: str, file_name: str) -> None:
     assert os.path.isfile(file_path), "File does not exist"
 
     # Check if the content of the file is as expected
-    with open(file_path, "r") as file:
+    with open(file_path, 'r', encoding='utf-8') as file:
         content = file.read()
 
     # Delete the whole "sample_code" directory after the test

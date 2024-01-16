@@ -182,7 +182,7 @@ class PythonWriter:
                 f"Module fpath found in module map for dotpath: {module_dotpath}"
             )
         module_fpath = cast(str, module_fpath)
-        with open(module_fpath, "w") as output_file:
+        with open(module_fpath, 'w', encoding='utf-8') as output_file:
             output_file.write(source_code)
         subprocess.run(["black", module_fpath])
         subprocess.run(["isort", module_fpath])
@@ -302,7 +302,7 @@ class PythonWriter:
     @staticmethod
     def _update_imports(module_obj: RedBaron, new_import_statements: NodeList) -> None:
         """Manage the imports in the module."""
-        first_import = module_obj.find(lambda identifier: identifier in ("import", "from_import"))
+        first_import = module_obj.find(lambda identifier: identifier in {"import", "from_import"})
 
         for new_import_statement in new_import_statements:
             existing_import_statement = find_import_syntax_tree_node_by_name(

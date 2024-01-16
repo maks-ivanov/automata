@@ -41,8 +41,7 @@ def run(kwargs):
 
     if not kwargs.get("session_id"):
         return agent_manager.run()
-    else:
-        agent_manager.replay_messages()
+    agent_manager.replay_messages()
 
 
 def main(kwargs):

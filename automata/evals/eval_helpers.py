@@ -30,9 +30,7 @@ class EvalAction:
         """
         Performs a relative comparison between two actions
         """
-        for token in self.tokens:
-            if token not in action_str:
-                return False
+        return not any(token not in action_str for token in self.tokens)
         return True
 
     def full_match(self, extracted_action: Action, expected_action: Action) -> bool:

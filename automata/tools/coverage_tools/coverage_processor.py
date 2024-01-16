@@ -38,9 +38,7 @@ class CoverageProcessor:
         coverage_df = self.get_coverage_df(module_path)
         # get lines from df by module and object
         uncovered_line_numbers = sorted(
-            coverage_df[
-                (coverage_df["module"] == module_path) & (coverage_df["object"] == function_name)
-            ]["line_number"].iloc[0]
+            coverage_df[(coverage_df["module"] == module_path) & (coverage_df["object"] == function_name)]["line_number"].iat[0]
         )
 
         uncovered_line_numbers_queue = uncovered_line_numbers[:]

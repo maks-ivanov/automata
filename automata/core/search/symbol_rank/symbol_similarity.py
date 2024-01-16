@@ -38,8 +38,8 @@ class SymbolSimilarity:
         )
         self.embedding_provider: EmbeddingsProvider = symbol_embedding_map.embedding_provider
         self.default_norm_type = norm_type
-        symbols = sorted(list(self.embedding_dict.keys()), key=lambda x: x.uri)
-        self.index_to_symbol = {i: symbol for i, symbol in enumerate(symbols)}
+        symbols = sorted(self.embedding_dict.keys())
+        self.index_to_symbol = dict(enumerate(symbols))
         self.symbol_to_index = {symbol: i for i, symbol in enumerate(symbols)}
 
     def transform_similarity_matrix(
@@ -229,13 +229,12 @@ class SymbolSimilarity:
         if norm_type == NormType.L1:
             norm = np.sum(np.abs(embeddings), axis=1, keepdims=True)
             return embeddings / norm
-        elif norm_type == NormType.L2:
+        if norm_type == NormType.L2:
             return embeddings / np.linalg.norm(embeddings, axis=1, keepdims=True)
-        elif norm_type == NormType.SOFTMAX:
+        if norm_type == NormType.SOFTMAX:
             e_x = np.exp(embeddings - np.max(embeddings, axis=1, keepdims=True))
             return e_x / np.sum(e_x, axis=1, keepdims=True)
-        else:
-            raise ValueError(f"Invalid normalization type {norm_type}")
+        raise ValueError(f"Invalid normalization type {norm_type}")
 
     @staticmethod
     def _normalize_matrix(M: np.ndarray) -> np.ndarray:

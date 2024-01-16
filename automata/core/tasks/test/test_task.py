@@ -56,8 +56,7 @@ def registry(task):
     def mock_get_tasks_by(query, params):
         if params[0] == task.task_id:
             return [task]
-        else:
-            return []
+        return []
 
     db = MagicMock()
     repo_manager = MockRepositoryManager()

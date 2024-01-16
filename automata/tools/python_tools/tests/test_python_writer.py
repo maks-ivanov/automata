@@ -232,7 +232,7 @@ def test_create_update_write_module(python_writer):
     root_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sample_modules")
     fpath = os.path.join(root_dir, "sample_module_write.py")
     assert os.path.exists(fpath)
-    with open(fpath, "r") as f:
+    with open(fpath, 'r', encoding='utf-8') as f:
         contents = f.read()
         assert_code_lines_equal(source_code, contents)
 
@@ -246,7 +246,7 @@ def test_create_update_write_module(python_writer):
         source_code=source_code_2, module_dotpath="sample_module_write", do_write=True
     )
 
-    with open(fpath, "r") as f:
+    with open(fpath, 'r', encoding='utf-8') as f:
         contents = f.read()
         assert_code_lines_equal("\n".join([source_code, source_code_2]), contents)
 

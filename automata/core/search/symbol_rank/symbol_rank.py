@@ -125,9 +125,8 @@ class SymbolRank:
         node_count = stochastic_graph.number_of_nodes()
         if initial_weights is None:
             return {k: 1.0 / node_count for k in stochastic_graph}
-        else:
-            s = sum(initial_weights.values())
-            return {k: v / s for k, v in initial_weights.items()}
+        s = sum(initial_weights.values())
+        return {k: v / s for k, v in initial_weights.items()}
 
     def _prepare_symbol_similarity(
         self,
@@ -148,15 +147,14 @@ class SymbolRank:
         """
         if symbol_similarity is None:
             return {k: 1.0 / node_count for k in stochastic_graph}
-        else:
-            missing = set(self.graph) - set(symbol_similarity)
-            if missing:
-                raise NetworkXError(
-                    "symbol_similarity dictionary must have a value for every node. Missing nodes %s"
-                    % missing
-                )
-            s = sum(symbol_similarity.values())
-            return {k: v / s for k, v in symbol_similarity.items()}
+        missing = set(self.graph) - set(symbol_similarity)
+        if missing:
+            raise NetworkXError(
+                "symbol_similarity dictionary must have a value for every node. Missing nodes %s"
+                % missing
+            )
+        s = sum(symbol_similarity.values())
+        return {k: v / s for k, v in symbol_similarity.items()}
 
     def _prepare_dangling_weights(
         self, dangling: Optional[Dict[str, float]], symbol_similarity: Dict[str, float]
@@ -173,15 +171,14 @@ class SymbolRank:
         """
         if dangling is None:
             return symbol_similarity
-        else:
-            missing = set(self.graph) - set(dangling)
-            if missing:
-                raise NetworkXError(
-                    "Dangling node dictionary must have a value for every node. Missing nodes %s"
-                    % missing
-                )
-            s = sum(dangling.values())
-            return {k: v / s for k, v in dangling.items()}
+        missing = set(self.graph) - set(dangling)
+        if missing:
+            raise NetworkXError(
+                "Dangling node dictionary must have a value for every node. Missing nodes %s"
+                % missing
+            )
+        s = sum(dangling.values())
+        return {k: v / s for k, v in dangling.items()}
 
     def _get_dangling_nodes(self, stochastic_graph: nx.DiGraph) -> List[Hashable]:
         """

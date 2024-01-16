@@ -61,10 +61,9 @@ def test_get_nearest_symbols_for_query(monkeypatch, mock_simple_method_symbols):
     def mock_get_embedding(_, symbol_source):
         if symbol_source == "symbol1":
             return embedding1.vector
-        elif symbol_source == "symbol2":
+        if symbol_source == "symbol2":
             return embedding2.vector
-        else:
-            return embedding3.vector
+        return embedding3.vector
 
     monkeypatch.setattr(EmbeddingsProvider, "get_embedding", mock_get_embedding)
 
@@ -108,10 +107,9 @@ def test_transform_similarity_matrix(monkeypatch, mock_simple_method_symbols):
     def mock_get_embedding(_, symbol_source):
         if symbol_source == "symbol1":
             return embedding1.vector
-        elif symbol_source == "symbol2":
+        if symbol_source == "symbol2":
             return embedding2.vector
-        else:
-            return embedding3.vector
+        return embedding3.vector
 
     monkeypatch.setattr(EmbeddingsProvider, "get_embedding", mock_get_embedding)
 
@@ -154,10 +152,9 @@ def test_generate_unit_normed_query_vector(monkeypatch, mock_simple_method_symbo
     def mock_get_embedding(_, symbol_source):
         if symbol_source == "symbol1":
             return embedding1.vector
-        elif symbol_source == "symbol2":
+        if symbol_source == "symbol2":
             return embedding2.vector
-        else:
-            return embedding3.vector
+        return embedding3.vector
 
     monkeypatch.setattr(EmbeddingsProvider, "get_embedding", mock_get_embedding)
 

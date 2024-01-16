@@ -91,7 +91,7 @@ class PythonCodeRetriever:
                 if filtered_node and isinstance(filtered_node[0], StringNode):
                     index = filtered_node[0].index_on_parent
                     node.pop(index)
-                child_nodes = node.find_all(lambda identifier: identifier in ("def", "class"))
+                child_nodes = node.find_all(lambda identifier: identifier in {"def", "class"})
                 for child_node in child_nodes:
                     if child_node is not node:
                         _remove_docstrings(child_node)
@@ -128,8 +128,7 @@ class PythonCodeRetriever:
             if node:
                 if node.parent[0].type == "class":
                     return f"{node.parent.name}.{node.name}"
-                else:
-                    return node.name
+                return node.name
         return NO_RESULT_FOUND_STR
 
     def get_parent_function_num_code_lines(
@@ -181,9 +180,9 @@ class PythonCodeRetriever:
 
             # retarget def or class node
             if node.type not in ("def", "class") and node.parent_find(
-                lambda identifier: identifier in ("def", "class")
+                lambda identifier: identifier in {"def", "class"}
             ):
-                node = node.parent_find(lambda identifier: identifier in ("def", "class"))
+                node = node.parent_find(lambda identifier: identifier in {"def", "class"})
 
             path = node.path().to_baron_path()
             pointer = module
@@ -202,7 +201,7 @@ class PythonCodeRetriever:
                             result += self._create_line_number_tuples(
                                 pointer[x], start_line, start_col
                             )
-                        if pointer[x].type in ("def", "class"):
+                        if pointer[x].type in {"def", "class"}:
                             docstring = PythonCodeRetriever._get_docstring(pointer[x])
                             node_copy = pointer[x].copy()
                             node_copy.value = '"""' + docstring + '"""'
@@ -274,7 +273,7 @@ class PythonCodeRetriever:
 
                     node = module.at(lineno)
                     if node.type not in ("def", "class"):
-                        node = node.parent_find(lambda identifier: identifier in ("def", "class"))
+                        node = node.parent_find(lambda identifier: identifier in {"def", "class"})
 
                     if node:
                         result += f".{node.name}"

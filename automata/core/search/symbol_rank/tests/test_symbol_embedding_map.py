@@ -22,7 +22,7 @@ def test_build_embedding_map(
 
     # Verify the results
     assert len(embedding_dict) == 200
-    for _, symbol_embedding in embedding_dict.items():
+    for symbol_embedding in embedding_dict.values():
         assert symbol_embedding.vector.all() == mock_embedding.all()
 
 
@@ -40,7 +40,7 @@ def test_save_load_embedding_map(
     sem.save(temp_output_filename)
     sem_load = SymbolEmbeddingMap.load(temp_output_filename)
     for key, val in sem_load.items():
-        assert key.uri in [symbol.uri for symbol in sem.embedding_dict.keys()]
+        assert key.uri in (symbol.uri for symbol in sem.embedding_dict.keys())
 
 
 def test_get_embedding_sets_correct_result(

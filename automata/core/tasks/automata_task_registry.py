@@ -165,12 +165,11 @@ class AutomataTaskRegistry:
         )
         if not results:
             return None
-        else:
-            if len(results) != 1:
-                raise Exception(f"Found multiple tasks with id {task_id}")
-            task = results[0]
-            task.observer = self.update_task
-            return task
+        if len(results) != 1:
+            raise Exception(f"Found multiple tasks with id {task_id}")
+        task = results[0]
+        task.observer = self.update_task
+        return task
 
     def get_all_tasks(self) -> list[AutomataTask]:
         results = self.db.get_tasks_by(query="SELECT json FROM tasks")

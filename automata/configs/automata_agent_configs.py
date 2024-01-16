@@ -95,7 +95,7 @@ class AutomataAgentConfig(BaseModel):
             file_dir_path, ConfigCategory.AGENT.value, f"{config_name.value}.yaml"
         )
 
-        with open(config_abs_path, "r") as file:
+        with open(config_abs_path, 'r', encoding='utf-8') as file:
             loaded_yaml = yaml.safe_load(file)
 
         if "tools" in loaded_yaml:
@@ -128,9 +128,9 @@ class AutomataAgentConfig(BaseModel):
     @staticmethod
     def _format_prompt(format_variables: AutomataInstructionPayload, input_text: str) -> str:
         """Format expected strings into the config."""
-        for arg in format_variables.__dict__.keys():
-            if format_variables.__dict__[arg]:
-                input_text = input_text.replace(f"{{{arg}}}", format_variables.__dict__[arg])
+        for (arg, format_variables___dict___arg) in format_variables.__dict__.items():
+            if format_variables___dict___arg:
+                input_text = input_text.replace(f"{{{arg}}}", format_variables___dict___arg)
         return input_text
 
     def _build_tool_message(self):

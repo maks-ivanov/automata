@@ -127,11 +127,10 @@ class SymbolSearcher:
 
         if search_type == "symbol_references":
             return self.symbol_references(query_remainder)
-        elif search_type == "symbol_rank":
+        if search_type == "symbol_rank":
             return self.symbol_rank_search(query_remainder)
-        elif search_type == "exact":
+        if search_type == "exact":
             return self.exact_search(query_remainder)
-        elif search_type == "source":
+        if search_type == "source":
             return self.retrieve_source_code_by_symbol(query_remainder)
-        else:
-            raise ValueError(f"Unknown search type: {search_type}")
+        raise ValueError(f"Unknown search type: {search_type}")
